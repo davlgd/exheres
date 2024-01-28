@@ -1,0 +1,42 @@
+# Copyright 2024 davlgd <1110600+davlgd@users.noreply.github.com>
+# Distributed under the terms of the GNU General Public License v2
+
+require github [ user="vlang" project=${PN} tag=${PV} ]
+
+HOMEPAGE="https://vlang.io/"
+UPSTREAM_CHANGELOG="https://github.com/vlang/v/blob/master/CHANGELOG.md [[ lang = en ]]"
+UPSTREAM_DOCUMENTATION="
+    https://github.com/vlang/v/blob/master/doc/docs.md [[ lang = en description = [ Documentation ] ]]
+    https://modules.vlang.io/ [[ lang = en description = [ Standard Library ] ]]
+"
+SUMMARY="Simple, fast, safe, compiled language for developing maintainable software."
+DESCRIPTION="
+V is a statically typed compiled programming language designed for building maintainable software.
+It's similar to Go and its design has also been influenced by Oberon, Rust, Swift, Kotlin, and Python.
+V is a very simple language. Going through this documentation will take you about a weekend, and by the end of it you will have pretty much learned the entire language.
+The language promotes writing simple and clear code with minimal abstraction.
+Despite being simple, V gives the developer a lot of power. Anything you can do in other languages, you can do in V.
+"
+PLATFORMS="~amd64"
+SLOT="0"
+
+src_compile() {
+  if [[ -f Makefile ]] || [[ -f makefile ]] || [[ -f GNUmakefile ]] ; then
+    emake clean
+    esandbox disable_net
+    emake fresh_tcc
+    emake fresh_vc
+    emake "${DEFAULT_SRC_COMPILE_PARAMS[@]}" prod=1 local=1
+    esandbox enable_net
+  fi
+}
+
+src_install () {
+  dobin ${PN}
+}
+
+src_test() {
+  esandbox disable_net
+  make check
+  esandbox enable_net
+}
