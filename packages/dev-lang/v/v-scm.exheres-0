@@ -3,13 +3,8 @@
 
 require github [ user="vlang" ]
 
+SUMMARY="Simple, fast, safe, compiled language for developing maintainable software"
 HOMEPAGE="https://vlang.io/"
-UPSTREAM_CHANGELOG="https://github.com/vlang/v/blob/master/CHANGELOG.md [[ lang = en ]]"
-UPSTREAM_DOCUMENTATION="
-    https://github.com/vlang/v/blob/master/doc/docs.md [[ lang = en description = [ Documentation ] ]]
-    https://modules.vlang.io/ [[ lang = en description = [ Standard Library ] ]]
-"
-SUMMARY="Simple, fast, safe, compiled language for developing maintainable software."
 DESCRIPTION="
 V is a statically typed compiled programming language designed for building maintainable software.
 It's similar to Go and its design has also been influenced by Oberon, Rust, Swift, Kotlin, and Python.
@@ -17,15 +12,44 @@ V is a very simple language. Going through this documentation will take you abou
 The language promotes writing simple and clear code with minimal abstraction.
 Despite being simple, V gives the developer a lot of power. Anything you can do in other languages, you can do in V.
 "
-PLATFORMS="~amd64"
+
+UPSTREAM_CHANGELOG="https://github.com/vlang/v/blob/master/CHANGELOG.md [[ lang = en ]]"
+UPSTREAM_DOCUMENTATION="
+    https://github.com/vlang/v/blob/master/doc/docs.md [[ lang = en description = [ Documentation ] ]]
+    https://modules.vlang.io/ [[ lang = en description = [ Standard Library ] ]]
+"
+
+LICENCES="MIT"
 SLOT="0"
+PLATFORMS="~amd64"
+MYOPTIONS=""
+
+DEPENDENCIES="
+  fetch:
+    net-misc/curl
+"
+
+DEFAULT_SRC_COMPILE_PARAMS="local=1"
+
+src_fetch_extra() {
+  curl -Os https://raw.githubusercontent.com/vlang/v/master/GNUmakefile
+  emake fresh_vc
+  emake fresh_tcc
+}
+
+pkg_setup() {
+  export VFLAGS="-cc $(exhost --tool-prefix)cc"
+}
 
 src_compile() {
-  if [[ -f Makefile ]] || [[ -f makefile ]] || [[ -f GNUmakefile ]] ; then
-    esandbox disable_net
-    LDFLAGS="" VFLAGS="-cc $(exhost --build)-cc" emake "${DEFAULT_SRC_COMPILE_PARAMS[@]}"
-    esandbox enable_net
-  fi
+  mv ../../../vc .
+  mv ../../../thirdparty/tcc thirdparty/
+  default
+}
+
+src_test() {
+  ./v test-cleancode
+  ./v test-self
 }
 
 src_install () {  
@@ -35,7 +59,7 @@ src_install () {
   insinto "/usr/$(exhost --target)/libexec/vlang/"
   doins "v.mod"
 
-  paths=(
+  local paths=(
     "cmd"
     "vlib"
     "thirdparty"
@@ -45,19 +69,10 @@ src_install () {
     doins -r "${p}"
   done 
 
-  insinto "/usr/share/vlang/"
-  doins -r "examples"
-
+  emagicdocs
   dodoc -r "doc"
-  
-  #dodir "/usr/$(exhost --target)/libexec/vlang/"
-  #dosym "v" "/usr/local/bin/v"
-}
+  dodoc -r "examples"
 
-# TODO: find test procedure not using relying on gcc
-src_test() {
-  #esandbox disable_net
-  #make check
-  #esandbox enable_net
-  echo "Tests passed" 
+  dodir /usr/$(exhost --target)/bin
+  dosym ../libexec/vlang/v /usr/$(exhost --target)/bin/v
 }
