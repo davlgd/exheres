@@ -1,0 +1,38 @@
+# Copyright 2024 davlgd <1110600+davlgd@users.noreply.github.com>
+# Distributed under the terms of the GNU General Public License v2
+
+require github [ user="caddyserver" ] 
+
+SUMMARY="Fast and extensible multi-platform HTTP/1-2-3 web server with automatic HTTPS"
+HOMEPAGE="https://github.com/caddyserver/{PN}"
+
+LICENCES="Apache-2.0"
+SLOT="0"
+PLATFORMS="~amd64 ~armv7 ~armv8"
+MYOPTIONS=""
+
+DEPENDENCIES="
+  build:
+    dev-lang/go[>=1.20]
+"
+
+WORK="${WORKBASE}/${PN}-scm/cmd/${PN}"
+
+src_prepare() {
+  esandbox disable_net
+  edo go mod download
+  esandbox enable_net
+}
+
+src_compile() {
+  edo go build
+}
+
+src_test() {
+  edo cd ${WORKBASE}/${PN}-scm
+  edo go test
+}
+
+src_install() {
+  dobin ${PN}
+}
