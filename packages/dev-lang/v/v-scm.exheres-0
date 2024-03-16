@@ -1,7 +1,18 @@
 # Copyright 2024 davlgd <1110600+davlgd@users.noreply.github.com>
 # Distributed under the terms of the GNU General Public License v2
 
-require github [ user="vlang" ]
+SCM_REPOSITORY="https://github.com/vlang/${PN}.git"
+SCM_SECONDARY_REPOSITORIES="vc tcc"
+SCM_vc_REPOSITORY="https://github.com/vlang/vc"
+SCM_tcc_REPOSITORY="https://github.com/vlang/tccbin"
+
+case "${PLATFORM}" in
+  "amd64") SCM_tcc_BRANCH="thirdparty-linux-amd64" ;;
+  "armv7") SCM_tcc_BRANCH="thirdparty-linux-arm" ;;
+  "armv8") SCM_tcc_BRANCH="thirdparty-linux-aarch64" ;;
+esac
+
+require scm-git
 
 SUMMARY="Simple, fast, safe, compiled language for developing maintainable software"
 HOMEPAGE="https://vlang.io/"
@@ -21,41 +32,24 @@ UPSTREAM_DOCUMENTATION="
 
 LICENCES="MIT"
 SLOT="0"
-PLATFORMS="~amd64"
-MYOPTIONS=""
-
-DEPENDENCIES="
-  fetch:
-    net-misc/curl
-"
+PLATFORMS="~amd64 ~armv7 ~armv8"
+MYOPTIONS="platform: amd64 armv7 armv8"
 
 DEFAULT_SRC_COMPILE_PARAMS="local=1"
 
-src_fetch_extra() {
-  curl -Os https://raw.githubusercontent.com/vlang/v/master/GNUmakefile
-  emake fresh_vc
-  emake fresh_tcc
-}
-
-pkg_setup() {
-  export VFLAGS="-cc $(exhost --tool-prefix)cc"
-}
-
-src_compile() {
-  mv ../../../vc .
-  mv ../../../thirdparty/tcc thirdparty/
-  default
+src_prepare() {
+  edo mv ../vc .
+  edo mv ../tcc thirdparty/
+  edo export VFLAGS="-cc $(exhost --tool-prefix)cc"
 }
 
 src_test() {
-  ./v test-cleancode
-  ./v test-self
+  edo export VTEST_SANDBOXED_PACKAGING=1 
+  edo ./v test-self
 }
 
 src_install () {  
-  exeinto "/usr/$(exhost --target)/libexec/vlang/"
-  doexe "v"
-
+  
   insinto "/usr/$(exhost --target)/libexec/vlang/"
   doins "v.mod"
 
@@ -69,6 +63,11 @@ src_install () {
     doins -r "${p}"
   done 
 
+  exeinto "/usr/$(exhost --target)/libexec/vlang/"
+  doexe "v"
+  exeinto "/usr/$(exhost --target)/libexec/vlang/thirdparty/tcc/"
+  doexe "thirdparty/tcc/tcc.exe"
+  
   emagicdocs
   dodoc -r "doc"
   dodoc -r "examples"
