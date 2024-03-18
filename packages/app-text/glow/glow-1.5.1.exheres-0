@@ -1,0 +1,14 @@
+# Copyright 2024 davlgd <1110600+davlgd@users.noreply.github.com>
+# Distributed under the terms of the GNU General Public License v2
+
+require github [ user="charmbracelet" tag=v${PV} ] mygo
+
+SUMMARY="Fast and extensible multi-platform HTTP/1-2-3 web server with automatic HTTPS"
+HOMEPAGE="https://github.com/caddyserver/{PN}"
+
+LICENCES="MIT"
+SLOT="0"
+PLATFORMS="~amd64 ~armv7 ~armv8"
+MYOPTIONS=""
+
+DEPENDENCIES=""
