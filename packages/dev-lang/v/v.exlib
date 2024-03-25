@@ -1,13 +1,12 @@
-# Copyright 2024 davlgd <1110600+davlgd@users.noreply.github.com>
+# Copyright 2024 David Legrand <david.legrand@clever-cloud.com>
 # Distributed under the terms of the GNU General Public License v2
 
-export_exlib_phases src_prepare src_compile src_test src_install
+export_exlib_phases src_prepare pkg_setup src_compile src_test src_install
 
-SCM_REPOSITORY="https://github.com/vlang/${PN}.git"
-SCM_TAG="${PV}"
-SCM_SECONDARY_REPOSITORIES="vc tcc"
+SCM_SECONDARY_REPOSITORIES="vc tcc markdown"
 SCM_vc_REPOSITORY="https://github.com/vlang/vc"
 SCM_tcc_REPOSITORY="https://github.com/vlang/tccbin"
+SCM_markdown_REPOSITORY="https://github.com/vlang/markdown"
 
 case "${PLATFORM}" in
   "amd64") SCM_tcc_BRANCH="thirdparty-linux-amd64" ;;
@@ -15,7 +14,7 @@ case "${PLATFORM}" in
   "armv8") SCM_tcc_BRANCH="thirdparty-linux-aarch64" ;;
 esac
 
-require scm-git
+require github [ user=vlang tag=${PV} force_git_clone=true ] scm-git 
 
 SUMMARY="Simple, fast, safe, compiled language for developing maintainable software"
 HOMEPAGE="https://vlang.io/"
@@ -29,99 +28,204 @@ Despite being simple, V gives the developer a lot of power. Anything you can do 
 
 UPSTREAM_CHANGELOG="https://github.com/vlang/v/blob/master/CHANGELOG.md [[ lang = en ]]"
 UPSTREAM_DOCUMENTATION="
-    https://github.com/vlang/v/blob/master/doc/docs.md [[ lang = en description = [ Documentation ] ]]
+    https://github.com/vlang/v/blob/master/doc/docs.md [[ 
+        lang = en 
+        description = [ Documentation ] 
+    ]]
     https://modules.vlang.io/ [[ lang = en description = [ Standard Library ] ]]
 "
 
 LICENCES="MIT"
 SLOT="0"
-MYOPTIONS="platform: amd64 armv7 armv8"
+MYOPTIONS="
+    X [[ 
+        description = [ Set to 'true' if X window system is enabled on your system, it will be tested too ]
+    ]]
+    platform: amd64 armv8
+"
 
-DEFAULT_SRC_COMPILE_PARAMS="local=1"
+DEFAULT_SRC_COMPILE_PARAMS=(
+    local=1
+)
+
+DEFAULT_SRC_PREPARE_PATCHES=(
+    ${FILES}/patches-${PV}/0001-tools-prevent-module-updates-during-v-build-tools.patch
+    ${FILES}/patches-${PV}/0002-vtest-self-add-native_test-to-skippable-tests.patch
+    ${FILES}/patches-${PV}/0003-vtest-self-add-vet_test-to-skippable-tests.patch
+    ${FILES}/patches-${PV}/0004-vtest-self-add-network-tests-to-skippable-tests.patch
+)
 
 v_src_prepare() {
-  # Disable native update/recompile tools
-  edo echo "println('use your package manager to update V," > cmd/tools/vup.v
-  edo echo "or if you want more recent V versions, just clone V from source," >> cmd/tools/vup.v
-  edo echo "see https://github.com/vlang/v#installing-v-from-source')" >> cmd/tools/vup.v
+  default
 
-  edo echo "println('v self is disabled for packaged versions of V." > cmd/tools/vself.v
-  edo echo "Use your package manager, to update your V package instead." >> cmd/tools/vself.v
-  edo echo "Alternatively, if you do want a more recent V version, just clone V from source," >> cmd/tools/vself.v
-  edo echo "then follow the instructions here: https://github.com/vlang/v#installing-v-from-source')" >> cmd/tools/vself.v
+  # Replace update/recompile tools to disable them
+  edo cp -f ${FILES}/vup.v cmd/tools/vup.v
+  edo cp -f ${FILES}/vself.v cmd/tools/vself.v
 
   # Remove native tools needing X11 (fail to build on non graphical/X11 setup)
-  edo rm cmd/tools/vshare.v
+  if ! option X; then
+    edo rm cmd/tools/vshare.v
+  fi
 
   # Get and configure local vc/tcc/cc compilers
   edo mv ../vc .
   edo mv ../tcc thirdparty/
-  edo export VFLAGS="-cc $(exhost --tool-prefix)cc"
+
+  # Install Markdown vmodule
+  edo mkdir -p ${HOME}/.vmodules/
+  edo mv ../markdown ${HOME}/.vmodules/
+}
+
+v_pkg_setup() {
+  # Configure sanbox compiler
+  export VFLAGS="-cc $(exhost --tool-prefix)cc"
+
+  # Skip tests/phases using network or an embeded compiler
+  export VTEST_SANDBOXED_PACKAGING=1
 }
 
 v_src_compile() {
   default
-  
-  # Compile additional tools, downloading modules from GitHub
-  # This should be avoided in next release (https://github.com/vlang/v/pull/21094)
-  esandbox allow_net --connect "inet:0.0.0.0/0@443"
-  esandbox allow_net --connect "inet:0.0.0.0/0@53"
   edo ./v build-tools
-  esandbox disallow_net --connect "inet:0.0.0.0/0@443"
-  esandbox disallow_net --connect "inet:0.0.0.0/0@53"
+  
+  # Tools in a subfolder need to be compiled separately
+  local sub_tools=(
+    vpm
+    vast
+    vvet
+    vdoc
+    vwhere
+    vcreate
+  )
+  
+  for s in "${sub_tools[@]}"; do
+    edo ./v cmd/tools/${s}/
+  done 
 
-  # Create a file to prevent tools to be recompiled on-the-fly
+  # Create a file to prevent tools to be automaticaly recompiled
   edo touch cmd/tools/.disable_autorecompilation
 }
 
 v_src_test() {
-  # Skip tests using an embeded compiler
-  edo export VTEST_SANDBOXED_PACKAGING=1
-  edo sed -i "/'vlib\/v\/gen\/c\/coutput_test.v',/c\ \t'vlib/v/gen/c/coutput_test.v',\n\t'vlib/v/gen/native/tests/native_test.v'," cmd/tools/vtest-self.v
-  
-  # Some HTTP/Server tests need network access
-  esandbox allow_net "inet:0.0.0.0@8080"
-  esandbox allow_net "inet:0.0.0.0@18197"
-  esandbox allow_net --connect "inet:127.0.0.1@45123"
   edo ./v test-self
-  esandbox disallow_net "inet:0.0.0.0@8080"
-  esandbox disallow_net "inet:0.0.0.0@18197"
-  esandbox disallow_net --connect "inet:127.0.0.1@45123"
 }
 
 v_src_install () {
-  # Install additional files and folders
-  insinto "/usr/$(exhost --target)/libexec/vlang/"
-  doins "v.mod"
+  insinto "/usr/$(exhost --target)/libexec/vlang/cmd/tools/"
+  doins cmd/tools/.disable_autorecompilation
 
+  insinto "/usr/$(exhost --target)/libexec/vlang/"
+  doins v.mod
+  
   local paths=(
-    "cmd"
-    "vlib"
-    "thirdparty"
+    vlib
+    thirdparty
   )
 
   for p in "${paths[@]}"; do
     doins -r "${p}"
   done 
 
-  # Install doc and examples
   emagicdocs
-  dodoc -r "doc"
-  dodoc -r "examples"
+  dodoc -r doc
+  dodoc -r examples
 
   # Install additional tools built
+  local bins=(
+    vgret
+    vtest-all
+    parser_speed
+    detect_tcc
+    vcompress
+    regress
+    vscan
+    vfmt
+    changelog_helper
+    vbuild-examples
+    vrepeat
+    vcomplete
+    vmissdoc
+    translate
+    vbuild-vbinaries
+    vself
+    vtest-parser
+    vsetup-freetype
+    vbin2v
+    vup
+    vsymlink
+    vdoctor
+    scanner_speed
+    check_os_api_parity
+    vtest-fmt
+    fast_job
+    test_os_process
+    vwatch
+    vbuild-tools
+    vls
+    vwipe-cache
+    install_wabt.vsh
+    install_binaryen.vsh
+    performance_compare
+    vrepl
+    report_v_module_folders_without_tests
+    vbug
+    vtracev
+    vtest-self
+    test_if_v_test_system_works
+    vshould-compile-all
+    map_fuzz
+    vtest-cleancode
+    git_pre_commit_hook.vsh
+    vcheck-md
+    show_ancient_deprecations
+    oldv
+    vbump
+    vshader
+    vtest
+  )
+
+  if option X; then
+    bins+=(vshare)
+  fi
+  
   exeinto "/usr/$(exhost --target)/libexec/vlang/cmd/tools/"
-  for f in "cmd/tools"/*; do
-    if file "${f}" | grep -q "executable"; then
-      doexe ${f}
-    fi
+  for f in "${bins[@]}"; do
+    doexe "cmd/tools/${f}"
   done
 
+  local builders=(
+    native_builder
+    interpret_builder
+    c_builder
+    js_builder
+    golang_builder
+    wasm_builder
+  )
+
+  exeinto "/usr/$(exhost --target)/libexec/vlang/cmd/tools/builders/"
+  for f in "${builders[@]}"; do
+    doexe "cmd/tools/builders/${f}"
+  done
+
+  local sub_tools=(
+    vpm
+    vast
+    vvet
+    vdoc
+    vwhere
+    vcreate
+  )
+  
+  for s in "${sub_tools[@]}"; do
+    exeinto "/usr/$(exhost --target)/libexec/vlang/cmd/tools/${s}/"
+    doexe "cmd/tools/${s}/${s}"
+  done 
+  
   # Install v and vcc compiler
   exeinto "/usr/$(exhost --target)/libexec/vlang/"
-  doexe "v"
+  doexe v
   exeinto "/usr/$(exhost --target)/libexec/vlang/thirdparty/tcc/"
-  doexe "thirdparty/tcc/tcc.exe"
+  doexe thirdparty/tcc/tcc.exe
 
   # Create the V symlink
   dodir /usr/$(exhost --target)/bin
