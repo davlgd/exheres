@@ -1,0 +1,35 @@
+# Copyright 2024 davlgd <1110600+davlgd@users.noreply.github.com>
+# Distributed under the terms of the GNU General Public License v2
+
+require bash-completion zsh-completion npm [ bin_path="bin/clever.js" bin_name="clever" ] 
+
+SUMMARY="Deploy on Clever Cloud and control you applications, add-ons, services from command line."
+HOMEPAGE="https://github.com/clever-cloud/${PN}"
+
+UPSTREAM_DOCUMENTATION="https://github.com/CleverCloud/${PN}/tree/master/docs [[ lang = en ]]"
+UPSTREAM_CHANGELOG="https://github.com/CleverCloud/${PN}/blob/master/CHANGELOG.md [[ lang = en ]]"
+
+LICENCES="|| ( Apache-2.0 )"
+SLOT="0"
+PLATFORMS="~amd64"
+
+DEPENDENCIES=""
+
+src_compile() {
+    option bash-completion && edo node_modules/${PN}/bin/clever.js --bash-autocomplete-script "/usr/$(exhost --target)/bin/clever" > clever-bash-completion
+    option zsh-completion && edo node_modules/${PN}/bin/clever.js --zsh-autocomplete-script "/usr/$(exhost --target)/bin/clever" > clever-zsh-completion
+
+    dobashcompletion clever-bash-completion clever
+    dozshcompletion clever-zsh-completion _clever
+}
+
+src_test() {
+    local version=$(clever version)
+
+    if [ ${version} != ${PV} ]; then
+        eerror "${PN} version doesn't match (expected: ${PV}, found: ${version})"
+        eerror "Please check where it's installed:"
+        eerror "whereis: $(whereis clever)"
+        exit 1
+    fi
+}
