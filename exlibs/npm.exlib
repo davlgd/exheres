@@ -1,0 +1,41 @@
+# Copyright 2024 davlgd <1110600+davlgd@users.noreply.github.com>
+# Distributed under the terms of the GNU General Public License v2
+
+myexparam node_minimum_version=20.11.1
+myexparam npm_name=${PN}
+myexparam bin_name
+myexparam bin_path
+
+exparam -v NPM_NAME npm_name
+exparam -v BIN_NAME bin_name
+exparam -v BIN_PATH bin_path
+
+export_exlib_phases src_fetch_extra src_prepare src_install
+node_dep="dev-lang/node[>=$(exparam node_minimum_version)]"
+
+DEPENDENCIES="
+    build:
+        ${node_dep}
+"
+
+WORK=${WORKBASE}
+
+npm_src_fetch_extra() {
+    ever is_scm && edo npm i ${NPM_NAME}
+    ever is_scm || edo npm i ${NPM_NAME}@${PV}
+}
+
+npm_src_prepare() {
+    mv ../../node_modules/ .
+}
+
+npm_src_install() {    
+    insinto "/usr/$(exhost --target)/libexec/"
+    doins -r "node_modules/"
+
+    exeinto "/usr/$(exhost --target)/libexec/node_modules/${NPM_NAME}/bin/"
+    doexe node_modules/${NPM_NAME}/${BIN_PATH}
+
+    dodir "/usr/$(exhost --target)/bin"
+    dosym ../libexec/node_modules/${NPM_NAME}/${BIN_PATH} /usr/$(exhost --target)/bin/${BIN_NAME}
+}
