@@ -5,7 +5,7 @@ SCM_SECONDARY_REPOSITORIES="wpt"
 SCM_wpt_REPOSITORY="https://github.com/web-platform-tests/wpt.git"
 SCM_EXTERNAL_REFS="tests/wpt/suite:wpt"
 
-require github [ user=denoland tag=v${PV} ]
+require github [ user=denoland tag=v${PV} ] scm-git
 require cargo
 
 SUMMARY="A JavaScript, TypeScript, and WebAssembly runtime with secure defaults and a great developer experience. It's built on V8, Rust, and Tokio."
