@@ -14,7 +14,7 @@ case "${PLATFORM}" in
   "armv8") SCM_tcc_BRANCH="thirdparty-linux-aarch64" ;;
 esac
 
-require github [ user=vlang tag=${PV} ] scm-git 
+require github [ user=vlang tag=${PV} force_git_clone=true ] scm-git 
 
 SUMMARY="Simple, fast, safe, compiled language for developing maintainable software"
 HOMEPAGE="https://vlang.io/"
