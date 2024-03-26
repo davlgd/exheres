@@ -1,6 +1,11 @@
 # Copyright 2024 davlgd <1110600+davlgd@users.noreply.github.com>
 # Distributed under the terms of the GNU General Public License v2
 
+SCM_SECONDARY_REPOSITORIES="wpt"
+SCM_EXTERNAL_REFS="tests/wpt/suite:wpt"
+SCM_wpt_REPOSITORY="https://github.com/web-platform-tests/wpt.git"
+
+require github [ user=denoland tag=v${PV} ]
 require cargo
 
 SUMMARY="A JavaScript, TypeScript, and WebAssembly runtime with secure defaults and a great developer experience. It's built on V8, Rust, and Tokio."
@@ -12,4 +17,18 @@ LICENCES="|| ( Apache-2.0 MIT )"
 SLOT="0"
 PLATFORMS="~amd64 ~armv8"
 
-DEPENDENCIES=""
+#RESTRICT="strip test"
+
+DEPENDENCIES="
+    build: dev-libs/protobuf
+"
+
+src_prepare() {
+    edo ls tools
+    edo sleep 30
+}
+
+src_test() {
+    edo ./tests/wpt/wpt.ts setup
+    edo ./tests/wpt/wpt.ts run
+}
