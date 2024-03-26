@@ -28,8 +28,3 @@ PLATFORMS="~amd64 ~armv8"
 DEPENDENCIES="
     build: dev-libs/protobuf
 "
-
-src_test() {
-    edo ls
-    edo sleep 30
-}
