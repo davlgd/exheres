@@ -2,8 +2,8 @@
 # Distributed under the terms of the GNU General Public License v2
 
 SCM_SECONDARY_REPOSITORIES="wpt"
-SCM_EXTERNAL_REFS="tests/wpt/suite:wpt"
 SCM_wpt_REPOSITORY="https://github.com/web-platform-tests/wpt.git"
+SCM_EXTERNAL_REFS="tests/wpt/suite:wpt"
 
 require github [ user=denoland tag=v${PV} ]
 require cargo
