@@ -7,10 +7,6 @@ SCM_SECONDARY_REPOSITORIES="vc tcc markdown"
 SCM_vc_REPOSITORY="https://github.com/vlang/vc"
 SCM_tcc_REPOSITORY="https://github.com/vlang/tccbin"
 SCM_markdown_REPOSITORY="https://github.com/vlang/markdown"
-SCM_EXTERNAL_REFS="
-    vc:vc
-    tcc:thirdparty/tcc
-"
 
 case "${PLATFORM}" in
   "amd64") SCM_tcc_BRANCH="thirdparty-linux-amd64" ;;
@@ -18,7 +14,7 @@ case "${PLATFORM}" in
   "armv8") SCM_tcc_BRANCH="thirdparty-linux-aarch64" ;;
 esac
 
-require github [ user=vlang tag=${PV} force_git_clone=true ] scm-git 
+require github [ user=vlang tag=${PV} ] scm-git 
 
 SUMMARY="Simple, fast, safe, compiled language for developing maintainable software"
 HOMEPAGE="https://vlang.io/"
@@ -70,6 +66,10 @@ v_src_prepare() {
   if ! option X; then
     edo rm cmd/tools/vshare.v
   fi
+
+  # Get and configure local vc/tcc/cc compilers
+  edo mv ../vc .
+  edo mv ../tcc thirdparty/
 
   # Install Markdown vmodule
   edo mkdir -p ${HOME}/.vmodules/
