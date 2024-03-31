@@ -1,0 +1,36 @@
+# Copyright 2024 davlgd <1110600+davlgd@users.noreply.github.com>
+# Distributed under the terms of the GNU General Public License v2
+
+require github [ user=astral-sh ]
+
+SUMMARY="A comprehensive project and package management solution for Python"
+HOMEPAGE="https://${PN}-up.com"
+
+UPSTREAM_CHANGELOG="https://github.com/astral-sh/rye/blob/master/CHANGELOG.md [[ lang = en ]]"
+UPSTREAM_DOCUMENTATION="https://rye-up.com/guide/ [[ lang = en ]]"
+
+LICENCES="MIT"
+SLOT="0"
+PLATFORMS="~amd64 ~armv8"
+MYOPTIONS=""
+
+DEPENDENCIES="
+    build: dev-lang/rust
+"
+
+src_prepare() {
+    esandbox disable_net
+    edo cargo vendor --manifest-path ${PN}/Cargo.toml
+    esandbox enable_net
+}
+
+src_compile() {
+    edo cargo build --release --frozen --offline
+}
+
+src_install() {
+    edo cargo install --path ${PN} --root="${IMAGE}"/usr/$(exhost --target) --frozen --offline
+    
+    emagicdocs
+    dodoc -r docs
+}
