@@ -1,24 +1,23 @@
 # Copyright 2024 davlgd <1110600+davlgd@users.noreply.github.com>
 # Distributed under the terms of the GNU General Public License v2
 
-require github [ user="minio" ] mygo
+require go github [ user="minio" ]
 
 SUMMARY="A modern alternative to UNIX commands like ls, cat, cp, mirror, diff, find etc. It supports filesystems and Amazon S3 compatible cloud storage service (AWS Signature v2 and v4)"
 HOMEPAGE="https://github.com/minio/{PN}"
 
 LICENCES="AGPL-3"
 SLOT="0"
-PLATFORMS="~amd64 ~armv7 ~armv8"
+PLATFORMS="~amd64 ~armv8"
 MYOPTIONS=""
 
 DEPENDENCIES="
-  build:
-    dev-lang/go[>=1.19]
   test:
     app-text/jq
 "
 
 src_test() {
+  export COMPLETE_RB_TEST=false
   emake verify
 }
 
