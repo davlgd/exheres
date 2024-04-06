@@ -23,8 +23,17 @@ LICENCES="|| ( Apache-2.0 MIT )"
 SLOT="0"
 PLATFORMS="~amd64 ~armv8"
 
-#RESTRICT="strip test"
-
 DEPENDENCIES="
     build: dev-libs/protobuf
 "
+
+#TODO: add more tests
+src_test() {
+    cargo test --release --bins --frozen --offline
+}
+
+src_install() {
+    edo cargo install --path cli --root="${IMAGE}"/usr/$(exhost --target) --frozen --offline
+    emagicdocs
+}
+
