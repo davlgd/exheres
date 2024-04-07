@@ -3,7 +3,8 @@
 
 require go github [ user="charmbracelet" tag=v${PV} ]
 
-SUMMARY="Fast and extensible multi-platform HTTP/1-2-3 web server with automatic HTTPS"
+SUMMARY="Write terminal GIFs as code for integration testing and demoing your CLI tools"
+HOMEPAGE="https://github.com/caddyserver/{PN}"
 
 LICENCES="MIT"
 SLOT="0"
@@ -11,4 +12,3 @@ PLATFORMS="~amd64 ~armv7 ~armv8"
 MYOPTIONS=""
 
 DEPENDENCIES=""
-
