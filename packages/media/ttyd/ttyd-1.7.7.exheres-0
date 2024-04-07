@@ -1,0 +1,26 @@
+# Copyright 2024 davlgd <1110600+davlgd@users.noreply.github.com>
+# Distributed under the terms of the GNU General Public License v2
+
+require github [ user="tsl0922" ]
+
+SUMMARY="A simple command-line tool for sharing terminal over the web"
+HOMEPAGE="https://tsl0922.github.io/${PN}"
+
+LICENCES="MIT"
+SLOT="0"
+PLATFORMS="~amd64 ~armv8"
+MYOPTIONS=""
+
+DEPENDENCIES="
+    build+run:
+        ffmpeg
+        net-libs/libwebsockets
+"
+
+src_compile() {
+    edo mkdir build
+    edo cd build
+    edo cmake ..
+    emake
+    emake install
+}
