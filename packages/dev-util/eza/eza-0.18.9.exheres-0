@@ -1,0 +1,13 @@
+# Copyright 2024 davlgd <1110600+davlgd@users.noreply.github.com>
+# Distributed under the terms of the GNU General Public License v2
+
+require cargo
+
+SUMMARY="A modern replacement for ls"
+HOMEPAGE="https://${PN}.rocks/"
+
+LICENCES="MIT"
+SLOT="0"
+PLATFORMS="~amd64 ~armv8"
+MYOPTIONS=""
+
