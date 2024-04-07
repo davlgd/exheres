@@ -1,0 +1,44 @@
+# Copyright 2024 davlgd <1110600+davlgd@users.noreply.github.com>
+# Distributed under the terms of the GNU General Public License v2
+
+require github [ user=helix-editor ]
+
+SUMMARY="An extremely fast Python package installer and resolver, written in Rust"
+HOMEPAGE="https://${PN}-editor.com/"
+
+LICENCES="MPL-2.0"
+SLOT="0"
+PLATFORMS="~amd64 ~armv8"
+MYOPTIONS=""
+
+DEPENDENCIES="
+    build:
+        dev-lang/rust
+"
+
+src_prepare() {
+    esandbox disable_net
+    edo cargo vendor
+    esandbox enable_net
+}
+
+src_compile() {
+    export HELIX_DEFAULT_RUNTIME="/usr/$(exhost --target)/lib/${PN}/runtime"
+    edo cargo build -p ${PN}-term --profile opt --frozen --offline
+}
+
+src_test() {
+    edo cargo test -p ${PN}-term --bins --profile opt --frozen --offline 
+}
+
+src_install() {
+    edo cargo install --path ${PN}-term --profile opt --root="${IMAGE}"/usr/$(exhost --target) --frozen --offline
+    
+    edo find runtime -type d -name .git -exec rm -rf {} +
+    edo find runtime -type d -empty -delete
+    insinto "/usr/$(exhost --target)/lib/${PN}"
+    doins -r runtime
+
+    emagicdocs
+}
+
