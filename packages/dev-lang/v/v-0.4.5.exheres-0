@@ -1,6 +1,0 @@
-# Copyright 2024 davlgd <1110600+davlgd@users.noreply.github.com>
-# Distributed under the terms of the GNU General Public License v2
-
-require v
-
-PLATFORMS="~amd64 ~armv7 ~armv8"
