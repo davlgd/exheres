@@ -1,7 +1,7 @@
 # Copyright 2024 davlgd <1110600+davlgd@users.noreply.github.com>
 # Distributed under the terms of the GNU General Public License v2
 
-require bash-completion zsh-completion npm [ bin_path="bin/clever.js" bin_name="clever" ] 
+require bash-completion zsh-completion npm [ bin_path="bin/clever.js" bin_name="clever" ]
 
 SUMMARY="Deploy on Clever Cloud and control you applications, add-ons, services from command line."
 HOMEPAGE="https://github.com/clever-cloud/${PN}"
@@ -33,3 +33,4 @@ src_test() {
         exit 1
     fi
 }
+
