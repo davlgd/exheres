@@ -1,0 +1,14 @@
+# Copyright 2024 davlgd <1110600+davlgd@users.noreply.github.com>
+# Distributed under the terms of the GNU General Public License v2
+
+require go github [ user="jpillora" tag=v${PV} ]
+
+SUMMARY="A fast TCP/UDP tunnel, transported over HTTP, secured via SSH"
+
+LICENCES="MIT"
+SLOT="0"
+PLATFORMS="~amd64 ~armv7 ~armv8"
+MYOPTIONS=""
+
+DEPENDENCIES=""
+
