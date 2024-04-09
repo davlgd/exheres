@@ -1,0 +1,43 @@
+# Copyright 2024 davlgd <1110600+davlgd@users.noreply.github.com>
+# Distributed under the terms of the GNU General Public License v2
+
+require github [ user=dunglas tag=v${PV} force_git_clone=true ] scm-git
+
+SCM_SECONDARY_REPOSITORIES="spc"
+SCM_spc_REPOSITORY="https://github.com/crazywhalecc/static-php-cli"
+
+#PHP_VERSION="8.3.4"
+
+SUMMARY="Linux kernel manager and activity monitor"
+HOMEPAGE="https://${PN}.cli.rs/"
+
+LICENCES="GPL-3"
+SLOT="0"
+PLATFORMS="~amd64 ~armv8"
+MYOPTIONS=""
+
+#DOWNLOADS+="
+#    https://www.php.net/distributions/php-${PHP_VERSION}.tar.gz
+#"
+
+WORK="${WORKBASE}/static-php-cli"
+
+src_prepare() {
+    default
+    edo chmod +x bin/setup-runtime
+    edo bin/setup-runtime
+    edo bin/composer install -n
+    edo chmod +x bin/spc
+    edo bin/spc --version
+    edo bin/spc doctor --auto-fix
+}
+
+src_compile() {
+
+    emake -j$(nproc)
+    #emake install
+
+    edo pushd ../${PNV}/frankenphp-main/caddy/frankenphp
+    CGO_CFLAGS=$(php-config --includes) CGO_LDFLAGS="$(php-config --ldflags) $(php-config --libs)" go build
+    popd
+}
