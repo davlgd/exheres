@@ -1,0 +1,74 @@
+# Copyright 2024 davlgd <1110600+davlgd@users.noreply.github.com>
+# Distributed under the terms of the GNU General Public License v2
+
+SCM_SECONDARY_REPOSITORIES="node std wpt"
+SCM_node_REPOSITORY="https://github.com/denoland/node_test.git"
+SCM_std_REPOSITORY="https://github.com/denoland/deno_std"
+SCM_wpt_REPOSITORY="https://github.com/web-platform-tests/wpt.git"
+SCM_EXTERNAL_REFS="
+    tests/util/std:std
+    tests/wpt/suite:wpt
+    tests/node_compat/runner/suite:node
+"
+
+require github [ user=denoland tag=v${PV} force_git_clone=true ] scm-git
+require cargo [ rust_minimum_version=1.77.0 ]
+
+SUMMARY="A JavaScript, TypeScript, and WebAssembly runtime with secure defaults and a great developer experience. It's built on V8, Rust, and Tokio."
+HOMEPAGE="https://deno.com/"
+
+UPSTREAM_DOCUMENTATION="https://docs.deno.com/runtime/manual [[ lang = en ]]"
+
+DOWNLOADS+="
+    platform:amd64? ( https://github.com/denoland/rusty_v8/releases/download/v0.89.0/librusty_v8_release_x86_64-unknown-linux-gnu.a.gz )
+    platform:armv8? ( https://github.com/denoland/rusty_v8/releases/download/v0.89.0/librusty_v8_release_aarch64-unknown-linux-gnu.a.gz )
+"
+
+LICENCES="|| ( Apache-2.0 MIT )"
+SLOT="0"
+PLATFORMS="~amd64 ~armv8"
+
+MYOPTIONS="
+    platform:
+        amd64
+        armv8
+"
+
+DEPENDENCIES="
+    build:
+        dev-libs/protobuf:*
+        dev-lang/python:*
+"
+
+CARGO_SRC_TEST_PARAMS=( --bins )
+CARGO_SRC_TEST_PARAMS+=(
+    --
+    --skip fetch
+    --skip http
+    --skip origin
+    --skip registry
+    --skip server
+    --skip url
+)
+
+src_prepare() {
+    // Deno needs bindings for the V8 JavaScript engine to be built locally
+    local LIBRUSTY_V8_ARCHIVE=""
+
+    if option "platform:amd64" ; then
+        LIBRUSTY_V8_ARCHIVE=librusty_v8_release_x86_64-unknown-linux-gnu.a
+    elif option "platform:armv8" ; then
+        LIBRUSTY_V8_ARCHIVE=librusty_v8_release_aarch64-unknown-linux-gnu.a
+    fi
+
+    if [ ! -z "${LIBRUSTY_V8_ARCHIVE}" ]; then
+        unpack ${LIBRUSTY_V8_ARCHIVE}.gz
+        export RUSTY_V8_ARCHIVE=${WORK}/${LIBRUSTY_V8_ARCHIVE}
+    fi
+}
+
+src_install() {
+    edo cargo install --path cli --root="${IMAGE}"/usr/$(exhost --target) --frozen
+    emagicdocs
+}
+
