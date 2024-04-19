@@ -12,7 +12,7 @@ SCM_EXTERNAL_REFS="
 "
 
 require github [ user=denoland tag=v${PV} force_git_clone=true ] scm-git
-require cargo [ rust_minimum_version=1.77.0 ]
+require cargo [ rust_minimum_version=1.77.2 crate_path=cli ]
 
 SUMMARY="A JavaScript, TypeScript, and WebAssembly runtime with secure defaults and a great developer experience. It's built on V8, Rust, and Tokio."
 HOMEPAGE="https://deno.com/"
@@ -40,8 +40,8 @@ DEPENDENCIES="
         dev-lang/python:*
 "
 
-CARGO_SRC_TEST_PARAMS=( --bins )
-CARGO_SRC_TEST_PARAMS+=(
+CARGO_SRC_TEST_PARAMS=(
+    --bins
     --
     --skip fetch
     --skip http
@@ -49,6 +49,11 @@ CARGO_SRC_TEST_PARAMS+=(
     --skip registry
     --skip server
     --skip url
+)
+
+CARGO_SRC_COMPILE_PARAMS=(
+    --no-default-features
+    --features "__vendored_zlib_ng"
 )
 
 src_prepare() {
@@ -65,10 +70,5 @@ src_prepare() {
         unpack ${LIBRUSTY_V8_ARCHIVE}.gz
         export RUSTY_V8_ARCHIVE=${WORK}/${LIBRUSTY_V8_ARCHIVE}
     fi
-}
-
-src_install() {
-    edo cargo install --path cli --root="${IMAGE}"/usr/$(exhost --target) --frozen
-    emagicdocs
 }
 
