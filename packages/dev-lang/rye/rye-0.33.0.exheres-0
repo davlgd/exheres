@@ -1,0 +1,17 @@
+# Copyright 2024 davlgd <1110600+davlgd@users.noreply.github.com>
+# Distributed under the terms of the GNU General Public License v2
+
+require github [ user=astral-sh force_git_clone=true ]
+require cargo [ rust_minimum_version=1.77.0 crate_path=${PN} ]
+
+SUMMARY="A comprehensive project and package management solution for Python"
+HOMEPAGE="https://rye-up.com"
+
+UPSTREAM_CHANGELOG="https://github.com/astral-sh/rye/blob/master/CHANGELOG.md [[ lang = en ]]"
+UPSTREAM_DOCUMENTATION="https://rye-up.com/guide/ [[ lang = en ]]"
+
+LICENCES="MIT"
+SLOT="0"
+PLATFORMS="~amd64 ~armv8"
+MYOPTIONS=""
+
