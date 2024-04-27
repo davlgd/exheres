@@ -21,13 +21,11 @@ src_compile() {
 }
 
 src_install() {
-    edo cargo install --path ${PN}-term --profile opt --root="${IMAGE}"/usr/$(exhost --target) --frozen
+    cargo_src_install
 
     edo find runtime -type d -name .git -exec rm -rf {} +
     edo find runtime -type d -empty -delete
     insinto "/usr/$(exhost --target)/lib/${PN}"
     doins -r runtime
-
-    emagicdocs
 }
 
