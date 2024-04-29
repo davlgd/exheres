@@ -1,0 +1,30 @@
+# Copyright 2024 davlgd <1110600+davlgd@users.noreply.github.com>
+# Distributed under the terms of the GNU General Public License v2
+
+SCM_SECONDARY_REPOSITORIES="cpp kompute"
+SCM_cpp_REPOSITORY="https://github.com/ggerganov/llama.cpp.git"
+SCM_kompute_REPOSITORY="https://github.com/nomic-ai/kompute.git"
+SCM_EXTERNAL_REFS="
+    llm/llama.cpp:cpp
+    kompute:kompute
+"
+
+require go [ go_minimum_version=1.22 ] github [ tag=v${PV} force_git_clone=true ] scm-git
+
+SUMMARY="Get up and running with Llama 3, Mistral, Gemma, and other large language models"
+
+LICENCES="MIT"
+SLOT="0"
+PLATFORMS="~amd64 ~armv8"
+MYOPTIONS=""
+
+DEPENDENCIES=""
+
+src_prepare() {
+    go_src_prepare
+
+    esandbox disable_net
+    go generate ./...
+    esandbox enable_net
+}
+
