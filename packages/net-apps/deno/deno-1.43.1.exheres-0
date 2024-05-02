@@ -1,14 +1,16 @@
 # Copyright 2024 davlgd <1110600+davlgd@users.noreply.github.com>
 # Distributed under the terms of the GNU General Public License v2
 
-SCM_SECONDARY_REPOSITORIES="node std wpt"
+SCM_SECONDARY_REPOSITORIES="lsp node std wpt"
+SCM_lsp_REPOSITORY="https://github.com/denoland/deno_lsp_benchdata.git"
 SCM_node_REPOSITORY="https://github.com/denoland/node_test.git"
 SCM_std_REPOSITORY="https://github.com/denoland/deno_std"
 SCM_wpt_REPOSITORY="https://github.com/web-platform-tests/wpt.git"
 SCM_EXTERNAL_REFS="
+    cli/bench/testdata/lsp_benchdata:lsp
+    tests/node_compat/runner/suite:node
     tests/util/std:std
     tests/wpt/suite:wpt
-    tests/node_compat/runner/suite:node
 "
 
 require github [ user=denoland tag=v${PV} force_git_clone=true ] scm-git
