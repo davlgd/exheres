@@ -1,4 +1,4 @@
-# Copyright 2024 davlgd <1110600+davlgd@users.noreply.github.com>
+# Copyright 2024 davlgd <david.legrand@clever-cloud.com>
 # Distributed under the terms of the GNU General Public License v2
 
 SCM_SECONDARY_REPOSITORIES="lsp node std wpt"
@@ -14,7 +14,7 @@ SCM_EXTERNAL_REFS="
 "
 
 require github [ user=denoland tag=v${PV} force_git_clone=true ] scm-git
-require cargo [ rust_minimum_version=1.77.2 crate_path=cli ]
+require cargo [ crate_path=cli rust_minimum_version=1.79.0 ]
 
 SUMMARY="A JavaScript, TypeScript, and WebAssembly runtime with secure defaults and a great developer experience. It's built on V8, Rust, and Tokio."
 HOMEPAGE="https://deno.com/"
@@ -22,8 +22,8 @@ HOMEPAGE="https://deno.com/"
 UPSTREAM_DOCUMENTATION="https://docs.deno.com/runtime/manual [[ lang = en ]]"
 
 DOWNLOADS+="
-    platform:amd64? ( https://github.com/denoland/rusty_v8/releases/download/v0.89.0/librusty_v8_release_x86_64-unknown-linux-gnu.a.gz )
-    platform:armv8? ( https://github.com/denoland/rusty_v8/releases/download/v0.89.0/librusty_v8_release_aarch64-unknown-linux-gnu.a.gz )
+    platform:amd64? ( https://github.com/denoland/rusty_v8/releases/download/v0.93.1/librusty_v8_release_x86_64-unknown-linux-gnu.a.gz )
+    platform:armv8? ( https://github.com/denoland/rusty_v8/releases/download/v0.93.1/librusty_v8_release_aarch64-unknown-linux-gnu.a.gz )
 "
 
 LICENCES="|| ( Apache-2.0 MIT )"
@@ -38,8 +38,9 @@ MYOPTIONS="
 
 DEPENDENCIES="
     build:
-        dev-libs/protobuf:*
         dev-lang/python:*
+        dev-libs/protobuf
+        sys-devel/cmake
 "
 
 CARGO_SRC_TEST_PARAMS=(
