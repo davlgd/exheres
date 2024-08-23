@@ -1,0 +1,39 @@
+# Copyright 2024 davlgd <1110600+davlgd@users.noreply.github.com>
+# Distributed under the terms of the GNU General Public License v2
+
+SUMMARY="The modern PHP app server"
+HOMEPAGE="https://frankenphp.dev/"
+
+PN="frankenphp"
+
+DOWNLOADS="
+    platform:amd64? ( https://github.com/dunglas/frankenphp/releases/download/v${PV}/frankenphp-linux-x86_64-debug -> ${PN} )
+    platform:armv8? ( https://github.com/dunglas/frankenphp/releases/download/v${PV}/frankenphp-linux-aarch64 -> ${PN} )
+"
+
+case "${PLATFORM}" in
+  "amd64") SUM="140322e72fd59a032fbbbfe3c4b1b87be5c5a1c92c6c1c90deedd2010b006942f56291d9e370a1eacc2937018e011677214adf9204adc1b737a469d5f99152ac" ;;
+  "armv8") SUM="025dbb016fef6fd3f60de69e31436e3d8f04e9538a4acbd01e626908b93933f0d3c24981439e4753b4954809bbee21e3e748580993473584975fe23627829fbd" ;;
+esac
+
+LICENCES="MIT"
+SLOT="0"
+PLATFORMS="~amd64 ~armv8"
+MYOPTIONS="
+    ( platform: amd64 armv8 )
+"
+
+DEPENDENCIES=""
+
+WORK="${WORKBASE}"
+
+src_unpack() {
+    edo sha512sum ${FETCHEDDIR}/${PN}
+    edo echo "${SUM}  ${FETCHEDDIR}/${PN}" | sha512sum -c || exit 1
+    edo chmod +x ${FETCHEDDIR}/${PN}
+}
+
+src_install() {
+    dobin ${FETCHEDDIR}/${PN}
+}
+
