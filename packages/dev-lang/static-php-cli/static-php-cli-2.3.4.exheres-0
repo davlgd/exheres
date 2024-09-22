@@ -1,7 +1,7 @@
 # Copyright 2024 davlgd <1110600+davlgd@users.noreply.github.com>
 # Distributed under the terms of the GNU General Public License v2
 
-require github [ user=crazywhalecc ]
+require github [ user=crazywhalecc force_git_clone=true ]
 
 SUMMARY="a powerful tool designed for building static, standalone PHP runtime with popular extensions"
 HOMEPAGE="https://static-php.dev"
@@ -11,9 +11,58 @@ SLOT="0"
 
 PLATFORMS="~amd64 ~armv8"
 
-DEPENDENCIES="
-    build+run:
-        sys-libs/musl
-"
+DEPENDENCIES=""
+
+DOWNLOADS="https://dl.static-php.dev/static-php-cli/deps/musl-toolchain/x86_64-musl-toolchain.tgz"
 
 RESTRICT="test"
+
+extensions=(
+    redis
+    session
+    sodium
+    sqlite3
+    zip
+    zlib
+    yaml
+    )
+
+libs=(
+    bzip2
+    freetype
+    libavif
+    libjpeg
+    liblz4
+    libwebp
+    libzip
+    nghttp2
+)
+
+extensions_comma_separated=$(IFS=,; echo "${extensions[*]}")
+libs_comma_separated=$(IFS=,; echo "${libs[*]}")
+
+src_prepare() {
+    export SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt
+    export SSL_CERT_DIR=/etc/ssl/certs
+
+    esandbox disable_net
+    edo bin/setup-runtime
+    edo bin/php bin/composer install
+    edo bin/php bin/spc doctor --auto-fix
+    esandbox enable_net
+}
+
+src_compile() {
+    edo echo ${extensions_comma_separated}
+    edo echo ${libs_comma_separated}
+
+    esandbox disable_net
+    edo bin/php bin/spc download --all --retry=5 --debug
+    edo bin/php bin/spc build --build-embed --enable-zts --disable-opcache-jit ${extensions_comma_separated} --with-libs=${libs_comma_separated}
+    esandbox enable_net
+
+# readline
+
+    edo ls
+    edo ls bin
+}
