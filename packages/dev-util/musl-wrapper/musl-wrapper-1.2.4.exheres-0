@@ -1,0 +1,59 @@
+# Copyright 2024 davlgd <1110600+davlgd@users.noreply.github.com>
+# Distributed under the terms of the GNU General Public License v2
+
+SUMMARY="An implementation of the C standard library built on top of the Linux system call API"
+HOMEPAGE="https://musl.libc.org/"
+
+LICENCES="MIT"
+SLOT="0"
+
+PLATFORMS="~amd64 ~armv8"
+
+DEPENDENCIES=""
+
+RESTRICT="strip"
+WORK=${WORKBASE}/musl-${PV}
+
+DOWNLOADS="
+    https://musl.libc.org/releases/musl-${PV}.tar.gz
+    https://dl.static-php.dev/static-php-cli/deps/musl-toolchain/x86_64-musl-toolchain.tgz
+"
+
+src_compile() {
+    export DESTDIR=${IMAGE}
+    ./configure --disable-gcc-wrapper --prefix=/usr/$(exhost --target)
+    emake
+}
+
+src_install() {
+    export DESTDIR=${IMAGE}
+    default
+
+    edo find ../output/ -type d -empty -delete
+    edo find "../output/" -type f | while read -r fichier
+    do
+        local relative_path=$(realpath --relative-to="../output/" "${fichier}")
+        relative_path=${relative_path%/*}
+
+        if [ -x "${fichier}" ]; then
+            exeinto "/usr/$(exhost --target)/musl/${relative_path}"
+            doexe "${fichier}"
+        else
+            insinto "/usr/$(exhost --target)/musl/${relative_path}"
+            doins "${fichier}"
+        fi
+    done
+
+    edo find "../output/" -type l | while read -r fichier
+    do
+        local relative_path=$(realpath --relative-to="../output/" "${fichier}")
+        target=$(readlink "${fichier}")
+        dosym "${target}" "/usr/$(exhost --target)/musl/${relative_path}"
+    done
+
+    edo rm -rf ${IMAGE}/lib
+
+    #dodir /usr/local/musl
+    #dosym /usr/$(exhost --target)/musl ${IMAGE}/usr/local/musl
+}
+
