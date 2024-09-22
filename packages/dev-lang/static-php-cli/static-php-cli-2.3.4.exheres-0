@@ -1,0 +1,19 @@
+# Copyright 2024 davlgd <1110600+davlgd@users.noreply.github.com>
+# Distributed under the terms of the GNU General Public License v2
+
+require github [ user=crazywhalecc ]
+
+SUMMARY="a powerful tool designed for building static, standalone PHP runtime with popular extensions"
+HOMEPAGE="https://static-php.dev"
+
+LICENCES="MIT"
+SLOT="0"
+
+PLATFORMS="~amd64 ~armv8"
+
+DEPENDENCIES="
+    build+run:
+        sys-libs/musl
+"
+
+RESTRICT="test"
