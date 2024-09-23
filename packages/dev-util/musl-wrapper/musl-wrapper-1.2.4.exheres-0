@@ -48,7 +48,7 @@ src_install() {
     do
         local relative_path=$(realpath --relative-to="../output/" "${fichier}")
         target=$(readlink "${fichier}")
-        dosym /usr/$(exhost --target)/musl/${relative_path%/*} ${target}
+        dosym /usr/$(exhost --target)/musl/${relative_path} ${target}
     done
 
     edo rm -rf ${IMAGE}/lib
