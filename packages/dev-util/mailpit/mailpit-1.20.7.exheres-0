@@ -14,7 +14,9 @@ DEPENDENCIES=""
 
 src_unpack() {
     go_src_unpack
+    esandbox disable_net
     npm install
+    esandbox enable_net
 }
 
 src_compile() {
