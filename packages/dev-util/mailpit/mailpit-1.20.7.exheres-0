@@ -12,3 +12,13 @@ MYOPTIONS=""
 
 DEPENDENCIES=""
 
+src_unpack() {
+    go_src_unpack
+    npm install
+}
+
+src_compile() {
+    npm run build
+    go_src_compile
+}
+
