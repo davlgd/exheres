@@ -29,7 +29,11 @@ src_unpack() {
 
     edo pushd "${WORKBASE}/${PNV}"
     esandbox disable_net
+
+    edo python -m venv .venv
+    edo source .venv/bin/activate
     edo pip install -r requirements.txt
+
     edo invoke install-tools
     edo go mod download -x
     esandbox enable_net
@@ -42,7 +46,6 @@ src_compile() {
 
 src_install() {
     newbin bin/agent/agent ${PN}
-
     dolib.so dev/lib64/*
 
     insinto /usr/$(exhost --target)/include/
