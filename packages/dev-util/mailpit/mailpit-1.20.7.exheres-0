@@ -14,9 +14,12 @@ DEPENDENCIES=""
 
 src_unpack() {
     go_src_unpack
+
+    edo pushd ${WORKBASE}/${PNV}
     esandbox disable_net
     npm install
     esandbox enable_net
+    edo popd
 }
 
 src_compile() {
