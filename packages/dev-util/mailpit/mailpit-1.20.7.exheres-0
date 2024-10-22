@@ -1,0 +1,29 @@
+# Copyright 2024 davlgd <1110600+davlgd@users.noreply.github.com>
+# Distributed under the terms of the GNU General Public License v2
+
+require go [ go_minimum_version=1.23 ] github [ user=axllent tag=v${PV} ]
+
+SUMMARY="An email and SMTP testing tool with API for developers"
+
+LICENCES="MIT"
+SLOT="0"
+PLATFORMS="~amd64 ~armv8"
+MYOPTIONS=""
+
+DEPENDENCIES=""
+
+src_unpack() {
+    go_src_unpack
+
+    edo pushd ${WORKBASE}/${PNV}
+    esandbox disable_net
+    npm install
+    esandbox enable_net
+    edo popd
+}
+
+src_compile() {
+    npm run build
+    go_src_compile
+}
+
