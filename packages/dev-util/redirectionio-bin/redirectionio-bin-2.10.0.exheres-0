@@ -1,6 +1,8 @@
 # Copyright 2024 David Legrand <david.legrand@clever-cloud.com>
 # Distributed under the terms of the GNU General Public License v2
 
+require systemd-service [ systemd_files=[ redirectionio-agent.service ]
+
 SUMMARY="Redirection.io agent"
 HOMEPAGE="https://redirection.io/"
 
@@ -23,6 +25,13 @@ DEPENDENCIES=""
 WORK="${WORKBASE}"
 
 src_install() {
+
+    dodir /etc/redirectionio
+    insinto /etc/redirectionio
+    doins agent.yml
+
+    install_systemd_files
+
     dobin ${WORK}/redirection-agent/redirectionio-agent
 }
 
