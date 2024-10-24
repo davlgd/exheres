@@ -1,7 +1,7 @@
 # Copyright 2024 David Legrand <david.legrand@clever-cloud.com>
 # Distributed under the terms of the GNU General Public License v2
 
-require systemd-service [ systemd_files=[ "${WORK}"/redirection-agent/redirectionio-agent.service ] ]
+require systemd-service [ systemd_files=[ redirection-agent/redirectionio-agent.service ] ]
 
 SUMMARY="Redirection.io agent"
 HOMEPAGE="https://redirection.io/"
