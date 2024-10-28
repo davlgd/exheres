@@ -24,7 +24,7 @@ src_compile() {
 }
 
 src_test() {
-    local version=$(clever version)
+    local version=$(edo "${WORK}"/node_modules/clever-tools/bin/clever.js version)
 
     if [ ${version} != ${PV} ]; then
         eerror "${PN} version doesn't match (expected: ${PV}, found: ${version})"
