@@ -14,7 +14,7 @@ MYOPTIONS=""
 DEPENDENCIES=""
 
 src_compile() {
-    edo go build -ldflags '${LDFLAGS} -s -w' -X main.Version=v${PV} -C cmd/${PN} -o ${PN}
+    edo go build -ldflags "-s -w -X 'main.Version=${LITESTREAM_VERSION}'" -C cmd/${PN} -o ${PN}
 }
 
 src_install() {
