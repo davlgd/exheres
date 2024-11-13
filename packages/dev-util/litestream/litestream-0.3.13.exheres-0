@@ -19,6 +19,10 @@ src_compile() {
 
 src_install() {
     emagicdocs
+
+    insinto /etc/
+    doins "${WORK}"/etc/${PN}.yml
+
     dobin cmd/${PN}/${PN}
 
     install_systemd_files
