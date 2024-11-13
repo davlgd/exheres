@@ -2,6 +2,7 @@
 # Distributed under the terms of the GNU General Public License v2
 
 require go [ go_minimum_version=1.21 ] github [ user="benbjohnson" tag=v${PV} ]
+require systemd-service [ systemd_files=[ etc/litestream.service ] ]
 
 SUMMARY="Streaming replication for SQLite"
 
@@ -19,5 +20,8 @@ src_compile() {
 src_install() {
     emagicdocs
     dobin cmd/${PN}/${PN}
+
+    install_systemd_files
+
 }
 
