@@ -1,0 +1,31 @@
+# Copyright 2024 davlgd <1110600+davlgd@users.noreply.github.com>
+# Distributed under the terms of the GNU General Public License v2
+
+require go [ go_minimum_version=1.21 ] github [ user="benbjohnson" tag=v${PV} ]
+require systemd-service [ systemd_files=[ etc/litestream.service ] ]
+
+SUMMARY="Streaming replication for SQLite"
+
+LICENCES="Apache-2.0"
+SLOT="0"
+PLATFORMS="~amd64 ~armv7 ~armv8"
+MYOPTIONS=""
+
+DEPENDENCIES=""
+
+src_compile() {
+    edo go build -C cmd/${PN} -ldflags "-extldflags \"${LDFLAGS},-static\" -s -w -X 'main.Version=v${PV}' -X 'main.BuildTime=$(date)'" -tags osusergo,netgo,sqlite_omit_load_extension -o ${PN}
+}
+
+src_install() {
+    emagicdocs
+
+    insinto /etc/
+    doins "${WORK}"/etc/${PN}.yml
+
+    dobin cmd/${PN}/${PN}
+
+    install_systemd_files
+
+}
+
