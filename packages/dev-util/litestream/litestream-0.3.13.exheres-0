@@ -14,7 +14,7 @@ MYOPTIONS=""
 DEPENDENCIES=""
 
 src_compile() {
-    edo go build -C cmd/${PN} -ldflags "-s -w -X 'main.Version=$v{PV}'"  -o ${PN}
+    edo go build -C cmd/${PN} -ldflags "-s -w -X 'main.Version=v${PV}'"  -o ${PN}
 }
 
 src_install() {
