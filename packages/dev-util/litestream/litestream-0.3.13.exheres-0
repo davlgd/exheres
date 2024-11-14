@@ -14,7 +14,7 @@ MYOPTIONS=""
 DEPENDENCIES=""
 
 src_compile() {
-    edo go build -C cmd/${PN} -ldflags "-extldflags \"${LDFLAGS},-static\" -s -w -X 'main.Version=v${PV}' -X 'main.BuildTime=$(date)'"  -o ${PN}
+    edo go build -C cmd/${PN} -ldflags "-extldflags \"${LDFLAGS},-static\" -s -w -X 'main.Version=v${PV}' -X 'main.BuildTime=$(date)'" -tags osusergo,netgo,sqlite_omit_load_extension -o ${PN}
 }
 
 src_install() {
