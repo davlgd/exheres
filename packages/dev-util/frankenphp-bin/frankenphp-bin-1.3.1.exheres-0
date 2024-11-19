@@ -1,0 +1,26 @@
+# Copyright 2024 davlgd <1110600+davlgd@users.noreply.github.com>
+# Distributed under the terms of the GNU General Public License v2
+
+SUMMARY="The modern PHP app server"
+HOMEPAGE="https://frankenphp.dev/"
+
+PN="frankenphp"
+
+DOWNLOADS="
+    platform:amd64? ( https://github.com/dunglas/frankenphp/releases/download/v${PV}/frankenphp-linux-x86_64 -> ${PNV} )
+    platform:armv8? ( https://github.com/dunglas/frankenphp/releases/download/v${PV}/frankenphp-linux-aarch64 -> ${PNV} )
+"
+
+LICENCES="MIT"
+SLOT="0"
+PLATFORMS="~amd64 ~armv8"
+MYOPTIONS=""
+
+DEPENDENCIES=""
+
+WORK="${WORKBASE}"
+
+src_install() {
+    dobin ${FETCHEDDIR}/${PNV}
+}
+
