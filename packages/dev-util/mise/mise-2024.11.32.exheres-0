@@ -1,0 +1,18 @@
+# Copyright 2024 davlgd <1110600+davlgd@users.noreply.github.com>
+# Distributed under the terms of the GNU General Public License v2
+
+require cargo [ rust_minimum_version=1.79 ]
+require github [ user=jdx tag=v${PV} ]
+
+SUMMARY="dev tools, env vars, task runner"
+HOMEPAGE="https://mise.jdx.dev/"
+
+LICENCES="MIT"
+SLOT="0"
+PLATFORMS="~amd64"
+MYOPTIONS=""
+
+DEPENDENCIES=""
+
+CARGO_SRC_TEST_PARAMS=( --bins )
+
