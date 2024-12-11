@@ -1,4 +1,4 @@
-# Copyright 2024 David Legrand <david.legrand@clever-cloud.com>
+# Copyright 2024 davlgd <1110600+davlgd@users.noreply.github.com>
 # Distributed under the terms of the GNU General Public License v2
 
 require github [ user=gleam-lang tag=v${PV} force_git_clone=true ]
