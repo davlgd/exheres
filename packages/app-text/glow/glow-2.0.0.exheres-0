@@ -1,9 +1,9 @@
 # Copyright 2024 davlgd <1110600+davlgd@users.noreply.github.com>
 # Distributed under the terms of the GNU General Public License v2
 
-require go github [ user="charmbracelet" tag=v${PV} ]
+require go [ go_minimum_version="1.21.4" ] github [ user="charmbracelet" tag=v${PV} ]
 
-SUMMARY="Fast and extensible multi-platform HTTP/1-2-3 web server with automatic HTTPS"
+SUMMARY="Render markdown on the CLI, with pizzazz!"
 
 LICENCES="MIT"
 SLOT="0"
@@ -11,4 +11,6 @@ PLATFORMS="~amd64 ~armv7 ~armv8"
 MYOPTIONS=""
 
 DEPENDENCIES=""
+
+RESTRICT="test"
 
