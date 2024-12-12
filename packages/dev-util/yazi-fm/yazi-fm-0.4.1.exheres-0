@@ -1,0 +1,15 @@
+# Copyright 2024 davlgd <1110600+davlgd@users.noreply.github.com>
+# Distributed under the terms of the GNU General Public License v2
+
+require cargo
+
+SUMMARY="Yazi file manager"
+HOMEPAGE="https://yazi-rs.github.io"
+
+UPSTREAM_DOCUMENTATION="https://yazi-rs.github.io/docs/quick-start [[ lang = en ]]"
+
+LICENCES="MIT"
+SLOT="0"
+PLATFORMS="~amd64 ~armv8"
+MYOPTIONS=""
+
