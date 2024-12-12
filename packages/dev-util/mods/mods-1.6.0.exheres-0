@@ -11,3 +11,7 @@ PLATFORMS="~amd64 ~armv7 ~armv8"
 MYOPTIONS=""
 
 DEPENDENCIES=""
+
+# Tests use the network
+RESTRICT="test"
+
