@@ -1,7 +1,7 @@
 # Copyright 2024 davlgd <1110600+davlgd@users.noreply.github.com>
 # Distributed under the terms of the GNU General Public License v2
 
-require cargo [ rust_minimum_version=1.74.0 ]
+require cargo [ rust_minimum_version=1.81.0 ]
 
 SUMMARY="High-performance WebAssembly runtime"
 HOMEPAGE="https://wasmer.io"
@@ -10,4 +10,12 @@ LICENCES="MIT"
 SLOT="0"
 PLATFORMS="~amd64 ~armv8"
 MYOPTIONS=""
+
+DEPENDENCIES=""
+
+CARGO_SRC_TEST_PARAMS=(
+    --bins
+    --
+    --skip cmd_package
+)
 
