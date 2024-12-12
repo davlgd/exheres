@@ -3,7 +3,7 @@
 
 require pypi [ pn="${MY_PN}" ]
 
-SUMMARY="A fast, simple and downright gorgeous static site generator that's geared towards building project documentation"
+SUMMARY="Say goodbye to your Git dependencies, host a Cargo registry using the GitLab package repository"
 HOMEPAGE="https://www.${PN}.org"
 
 LICENCES="BSD-2"
