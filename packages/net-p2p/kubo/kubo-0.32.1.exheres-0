@@ -1,0 +1,27 @@
+# Copyright 2024 davlgd <1110600+davlgd@users.noreply.github.com>
+# Distributed under the terms of the GNU General Public License v2
+
+require go [ go_minimum_version=1.23 ] github [ user="ipfs" tag=v${PV} ]
+
+SUMMARY="An IPFS implementation in Go"
+
+UPSTREAM_DOCUMENTATION="https://docs.ipfs.tech/how-to/command-line-quick-start/ [[ lang = en ]]"
+
+LICENCES="|| ( MIT Apache-2.0 )"
+SLOT="0"
+PLATFORMS="~amd64 ~armv8"
+MYOPTIONS=""
+
+DEPENDENCIES=""
+
+WORK="${WORKBASE}/${PNV}"
+
+src_compile() {
+    emake build
+}
+
+src_install() {
+    emagicdocs
+    dobin cmd/ipfs/ipfs
+}
+
