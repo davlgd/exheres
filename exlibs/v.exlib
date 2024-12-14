@@ -1,0 +1,20 @@
+# Copyright 2024 davlgd <1110600+davlgd@users.noreply.github.com>
+# Distributed under the terms of the GNU General Public License v2
+
+export_exlib_phases src_compile src_install
+
+DEPENDENCIES="
+    build:
+        dev-lang/v
+"
+
+v_src_compile() {
+    export VFLAGS="-cc $(exhost --tool-prefix)cc"
+    edo v -prod -o ${PN} .
+}
+
+v_src_install() {
+    dobin ${PN}
+    emagicdocs
+}
+
