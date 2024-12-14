@@ -1,7 +1,7 @@
 # Copyright 2024 davlgd <1110600+davlgd@users.noreply.github.com>
 # Distributed under the terms of the GNU General Public License v2
 
-myexparam node_minimum_version=20.11.1
+myexparam node_minimum_version=22.12.0
 myexparam npm_name=${PN}
 myexparam bin_name
 myexparam bin_path
@@ -29,7 +29,7 @@ npm_src_prepare() {
     mv ../../node_modules/ .
 }
 
-npm_src_install() {    
+npm_src_install() {
     insinto "/usr/$(exhost --target)/libexec/"
     doins -r "node_modules/"
 
