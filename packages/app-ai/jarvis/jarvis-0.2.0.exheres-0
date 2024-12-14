@@ -1,0 +1,19 @@
+# Copyright 2024 davlgd <1110600+davlgd@users.noreply.github.com>
+# Distributed under the terms of the GNU General Public License v2
+
+require v github [ user="davlgd" project="jarVis" tag=v${PV} ]
+
+SUMMARY="Your always ready-to-go CLI assistant, multi-platform, written in V"
+
+LICENCES="MIT"
+SLOT="0"
+PLATFORMS="~amd64 ~armv8"
+MYOPTIONS=""
+
+DEPENDENCIES="
+    build:
+        dev-lang/v
+"
+
+WORK="${WORKBASE}/JarVis-${PV}"
+
