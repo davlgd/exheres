@@ -1,7 +1,7 @@
 # Copyright 2024 davlgd <1110600+davlgd@users.noreply.github.com>
 # Distributed under the terms of the GNU General Public License v2
 
-require go github [ user="charmbracelet" tag=v${PV} ]
+require go [ go_minimum_version=1.21 ] github [ user="charmbracelet" tag=v${PV} ]
 
 SUMMARY="AI for the command line, built for pipelines"
 
