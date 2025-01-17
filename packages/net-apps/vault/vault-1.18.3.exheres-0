@@ -1,0 +1,32 @@
+# Copyright 2025 davlgd <1110600+davlgd@users.noreply.github.com>
+# Distributed under the terms of the GNU General Public License v2
+
+require go [ go_minimum_version=1.23.3 ] github [ user="hashicorp" tag=v${PV} ]
+
+# Get these values from the scripts/build.sh script in the repository
+GIT_COMMIT="7ae4eca5403bf574f142cd8f987b8d83bafcd1de"
+GIT_DIRTY="+CHANGES"
+BUILD_DATE="2024-12-16T14:00:53Z"
+
+SUMMARY="A tool for secrets management, encryption as a service, and privileged access management"
+
+LICENCES="BSL 1.1"
+SLOT="0"
+PLATFORMS="~amd64 ~armv7 ~armv8"
+MYOPTIONS=""
+
+DEPENDENCIES=""
+
+src_compile() {
+    edo go build \
+    -ldflags "${LD_FLAGS} -X github.com/hashicorp/vault/version.GitCommit='${GIT_COMMIT}${GIT_DIRTY}' -X github.com/hashicorp/vault/version.BuildDate=${BUILD_DATE}" \
+    -o "bin/${PN}" \
+    -tags ${PN} \
+    .
+}
+
+src_install() {
+    emagicdocs
+    dobin bin/${PN}
+}
+
