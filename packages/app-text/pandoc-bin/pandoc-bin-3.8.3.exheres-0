@@ -1,0 +1,32 @@
+# Copyright 2025 davlgd <1110600+davlgd@users.noreply.github.com>
+# Distributed under the terms of the GNU General Public License v2
+
+MY_PN=${PN%-bin}
+MY_PNV=${MY_PN}-${PV}
+
+SUMMARY="A universal document converter (binary version)"
+HOMEPAGE="https://pandoc.org"
+DOWNLOADS="
+    platform:amd64? ( https://github.com/jgm/${MY_PN}/releases/download/${PV}/${MY_PNV}-linux-amd64.tar.gz )
+    platform:armv8? ( https://github.com/jgm/${MY_PN}/releases/download/${PV}/${MY_PNV}-linux-arm64.tar.gz )
+"
+
+LICENCES="GPL-2"
+SLOT="0"
+PLATFORMS="~amd64 ~armv8"
+MYOPTIONS="platform: amd64 armv8"
+
+DEPENDENCIES=""
+
+WORK=${WORKBASE}/${MY_PNV}
+
+src_install() {
+    dobin bin/${MY_PN}
+    # pandoc-server and pandoc-lua are the same binary, picked by name
+    dosym ${MY_PN} /usr/$(exhost --target)/bin/${MY_PN}-server
+    dosym ${MY_PN} /usr/$(exhost --target)/bin/${MY_PN}-lua
+
+    edo gunzip share/man/man1/*.gz
+    doman share/man/man1/*.1
+}
+
