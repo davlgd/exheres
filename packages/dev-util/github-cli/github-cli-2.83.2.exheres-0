@@ -1,0 +1,39 @@
+# Copyright 2025 davlgd <1110600+davlgd@users.noreply.github.com>
+# Distributed under the terms of the GNU General Public License v2
+
+require go [ go_minimum_version=1.25.0 bin_name=gh bin_path=bin package_path=./cmd/gh ]
+require github [ user=cli project=cli tag=v${PV} ]
+require bash-completion zsh-completion
+
+SUMMARY="GitHub's official command line tool"
+HOMEPAGE+=" https://cli.github.com"
+
+LICENCES="MIT"
+SLOT="0"
+PLATFORMS="~amd64 ~armv7 ~armv8"
+MYOPTIONS=""
+
+DEPENDENCIES=""
+
+RESTRICT="test"
+
+GO_SRC_COMPILE_LDFLAGS=(
+    "-X github.com/cli/cli/v2/internal/build.Version=${PV}"
+)
+
+src_compile() {
+    go_src_compile
+
+    edo bin/gh completion -s bash > gh.bash-completion
+    edo bin/gh completion -s zsh > _gh
+    edo go run ./cmd/gen-docs --man-page --doc-path man
+}
+
+src_install() {
+    go_src_install
+
+    dobashcompletion gh.bash-completion gh
+    dozshcompletion _gh
+    doman man/*.1
+}
+
