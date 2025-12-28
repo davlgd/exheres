@@ -1,0 +1,21 @@
+# Copyright 2025 davlgd <1110600+davlgd@users.noreply.github.com>
+# Distributed under the terms of the GNU General Public License v2
+
+require go [ go_minimum_version=1.25.0 ] github [ user="jesseduffield" tag=v${PV} ]
+
+SUMMARY="Simple terminal UI for git commands"
+
+LICENCES="MIT"
+SLOT="0"
+PLATFORMS="~amd64 ~armv7 ~armv8"
+MYOPTIONS=""
+
+DEPENDENCIES="
+    run:
+        dev-scm/git
+"
+
+GO_SRC_COMPILE_LDFLAGS=(
+    "-X main.version=${PV}"
+)
+
