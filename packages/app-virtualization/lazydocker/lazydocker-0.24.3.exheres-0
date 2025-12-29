@@ -1,0 +1,18 @@
+# Copyright 2025 davlgd <1110600+davlgd@users.noreply.github.com>
+# Distributed under the terms of the GNU General Public License v2
+
+require go github [ user="jesseduffield" tag=v${PV} ]
+
+SUMMARY="The lazier way to manage everything docker"
+
+LICENCES="MIT"
+SLOT="0"
+PLATFORMS="~amd64 ~armv7 ~armv8"
+MYOPTIONS=""
+
+DEPENDENCIES=""
+
+GO_SRC_COMPILE_LDFLAGS=(
+    "-X main.version=${PV}"
+)
+
