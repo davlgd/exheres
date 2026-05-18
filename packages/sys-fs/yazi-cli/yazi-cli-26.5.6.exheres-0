@@ -1,7 +1,7 @@
 # Copyright 2024 davlgd <1110600+davlgd@users.noreply.github.com>
 # Distributed under the terms of the GNU General Public License v2
 
-require cargo
+require cargo [ rust_minimum_version=1.95.0 ]
 
 SUMMARY="Blazing fast terminal file manager written in Rust, based on async I/O"
 HOMEPAGE="https://yazi-rs.github.io"
