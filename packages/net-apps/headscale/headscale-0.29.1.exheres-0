@@ -1,0 +1,14 @@
+# Copyright 2026 davlgd <1110600+davlgd@users.noreply.github.com>
+# Distributed under the terms of the GNU General Public License v2
+
+require go [ go_minimum_version=1.26.4 package_path=./cmd/headscale ] github [ user="juanfont" tag=v${PV} ]
+
+SUMMARY="An open source, self-hosted implementation of the Tailscale control server"
+
+LICENCES="BSD-3"
+SLOT="0"
+PLATFORMS="~amd64 ~armv8"
+MYOPTIONS=""
+
+DEPENDENCIES=""
+
