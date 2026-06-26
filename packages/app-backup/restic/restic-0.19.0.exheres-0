@@ -1,0 +1,33 @@
+# Copyright 2026 davlgd <1110600+davlgd@users.noreply.github.com>
+# Distributed under the terms of the GNU General Public License v2
+
+require go [ go_minimum_version=1.25.8 package_path=./cmd/restic ] github [ user="restic" tag=v${PV} ]
+require bash-completion zsh-completion
+
+SUMMARY="Fast, secure, efficient backup program"
+HOMEPAGE+=" https://restic.net"
+
+LICENCES="BSD-2"
+SLOT="0"
+PLATFORMS="~amd64 ~armv7 ~armv8"
+MYOPTIONS=""
+
+DEPENDENCIES=""
+
+GO_SRC_COMPILE_LDFLAGS=(
+    "-X main.version=${PV}"
+)
+
+src_test() {
+    # the mount tests need FUSE
+    RESTIC_TEST_FUSE=0 go_src_test
+}
+
+src_install() {
+    go_src_install
+
+    dobashcompletion doc/bash-completion.sh restic
+    dozshcompletion doc/zsh-completion.zsh _restic
+    doman doc/man/*.1
+}
+
