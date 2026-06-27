@@ -1,0 +1,14 @@
+# Copyright 2026 davlgd <1110600+davlgd@users.noreply.github.com>
+# Distributed under the terms of the GNU General Public License v2
+
+require go [ go_minimum_version=1.25.7 bin_name=spf ] github [ user="yorukot" tag=v${PV} ]
+
+SUMMARY="Pretty fancy and modern terminal file manager"
+
+LICENCES="MIT"
+SLOT="0"
+PLATFORMS="~amd64 ~armv7 ~armv8"
+MYOPTIONS=""
+
+DEPENDENCIES=""
+
