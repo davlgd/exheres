@@ -1,0 +1,259 @@
+#!/bin/bash
+# Builds and tests packages of this repository in the exherbo/exherbo_ci
+# container, the way Exherbo's own CI does.
+#
+# Adapted from the buildtest script of that image, which only handles
+# repositories hosted on gitlab.exherbo.org and known to ::unavailable.
+#
+# Usage: buildtest <category/name>...
+# Expects the repository in /repo and the binary packages cache in /pbins.
+
+# Print message with current timestamp
+_einfo() {
+    echo -e "[$(date)] ${@}" 1>&2
+}
+
+# Verbose edo variant that always prints the output of the command
+_edov() {
+    _einfo "# ${@}"
+    "${@}"
+}
+
+# Quiet variant of edo to keep the log short
+#
+# This function will print the command to be executed and nothing else if that
+# command succeeds. If the command fails however, its complete output will be
+# printed for debugging
+_edo() {
+    echo -e "[$(date)] # ${@}" 1>&2
+
+    local rc
+    local logfile=$(mktemp)
+    ( "${@}" &> ${logfile} ) || rc=$?
+
+    if [[ ${rc} -ne 0 ]]; then
+        echo "Command failed with exit code ${rc}"
+        echo ""
+        echo "Output log:"
+        echo "%<-----"
+        cat ${logfile}
+        echo ">%-----"
+
+        exit ${rc}
+    fi
+
+    rm ${logfile}
+}
+
+# Finds missing repositories in the resolution of a package
+find_missing_repositories() {
+    cave resolve --hide '*/*::pbin' ${1} \
+        | grep -oE '::unavailable(-unofficial)? \(in ::[A-Za-z0-9+_.-]*\)' \
+        | sed -e 's#::unavailable.* (in ::\([^)]\+\))#repository/\1#g' \
+        | sort | uniq
+}
+
+set -e
+
+if [[ ${#} -eq 0 ]]; then
+    echo "Usage: ${0} <category/name>..." >&2
+    exit 2
+fi
+
+chgrp paludisbuild /dev/tty
+
+PALUDIS_REPO=$(< /repo/profiles/repo_name)
+
+# Enable our repo, from the checkout
+mkdir -p /var/db/paludis/repositories/${PALUDIS_REPO}
+tar -C /repo --exclude=.git -cf - . | tar -C /var/db/paludis/repositories/${PALUDIS_REPO} --no-same-owner -xf -
+cat <<EOF > /etc/paludis/repositories/${PALUDIS_REPO}.conf
+format = e
+location = \${root}/var/db/paludis/repositories/${PALUDIS_REPO}
+names_cache = \${root}/var/cache/paludis/names
+write_cache = \${root}/var/cache/paludis/metadata
+EOF
+_edo cave sync
+
+declare -a PKGS
+for arg in "${@}"; do
+    # Need to build new-style spec for use in config files below
+    specs=( $(cave print-ids -s install -m "${arg}::${PALUDIS_REPO}" -f '%c/%p%:%s::%r[=%V]\n') )
+
+    if [[ ${#specs[@]} -eq 0 ]]; then
+        _einfo "Couldn't find any exheres that match ${arg}::${PALUDIS_REPO}"
+        exit 1
+    fi
+    PKGS+=( "${specs[@]}" )
+done
+
+echo ""
+echo "These are the packages that I will build:"
+for pkg in "${PKGS[@]}"; do
+    echo " - ${pkg}"
+done
+echo ""
+
+# Set up pbins
+mkdir -p /pbins
+pushd /pbins >/dev/null
+mkdir -p {dist,pbin{,/metadata,/packages,/profiles}}
+echo 'pbin' > pbin/profiles/repo_name
+echo 'masters = arbor' > pbin/metadata/layout.conf
+touch pbin/profiles/options.conf
+touch pbin/metadata/categories.conf
+chown -R paludisbuild:paludisbuild .
+chmod -R g+w .
+popd >/dev/null
+
+keywords_filter=$(head -1 /etc/paludis/platforms.conf|sed 's|\*/\* ||')
+tool_prefix=$(awk -F ' = ' '/tool_prefix/ {print $2}' /etc/paludis/repositories/installed.conf)
+cat <<EOF > /etc/paludis/repositories/pbin.conf
+format = e
+location = /pbins/pbin
+distdir = /pbins/dist
+binary_distdir = /pbins/dist
+binary_destination = true
+binary_keywords_filter = ${keywords_filter}
+tool_prefix = ${tool_prefix}
+importance = -10
+EOF
+
+# Everything gets built as a pbin, so that dependencies (toolchains mostly) are
+# only compiled once and come from the cache afterwards
+VIA_BIN=("--via-binary" "*/*" "--one-binary-per-slot")
+
+# set the number of build jobs for the runner
+_edo sed -ri 's|jobs=[0-9]+|jobs='"$(nproc)"'|g' /etc/paludis/options.conf
+
+# paludis doesn't return an error code if the package is masked by platform
+# (https://gitlab.exherbo.org/paludis/paludis/-/merge_requests/47)
+# and most packages will build fine anyway so just enable them all
+echo "*/* *" > /etc/paludis/platforms.conf
+
+# Only enable tests for the target
+mkdir -p /etc/paludis/{options.conf.d,package_mask.conf.d}
+echo '*/* build_options: -recommended_tests' > /etc/paludis/options.conf.d/no_tests.conf
+
+# We are explicitely handling errors from here on
+set +e
+declare -a FAILED_PKGS SUCCEEDED_PKGS MSCAN_RESULTS CHECK_SLOTS_RESULTS
+for PKG in "${PKGS[@]}"; do
+    echo "**************************************************************"
+    echo "Building package ${PKG}"
+    echo "**************************************************************"
+
+    # ensure that tests run for the target and that it isn't installed from an existing pbin
+    echo "${PKG} build_options: recommended_tests" > /etc/paludis/options.conf.d/target_tests.conf
+    echo "${PKG/::*\[/::pbin\[}" > /etc/paludis/package_mask.conf.d/target_pbin.conf
+
+    # Install all repositories for dependencies in ::unavailable.
+    # --hide ::pbin to ensure that we install the origin repos in case they contain users/groups we need
+    declare -a NEW_REPOS
+    while
+        NEW_REPOS=( $(find_missing_repositories ${PKG}) )
+        [[ -n "${NEW_REPOS[@]}" ]]
+    do
+        _edo cave resolve -Ks "${NEW_REPOS[@]}" -x
+    done
+
+    # Handle confirmations automatically
+    TMPFILE=$(mktemp -uq)
+    cave resolve "${VIA_BIN[@]}" ${PKG} --execute-resolution-program true \
+        --display-resolution-program "cave print-resolution-required-confirmations" > ${TMPFILE}
+    ARGS=$(handle_confirmations < ${TMPFILE})
+    rc=$?
+    if [[ $rc -gt 0 ]]; then
+        echo "***** I FAILED! ***********************************************"
+        cat ${TMPFILE}
+        echo "**************************************************************"
+        FAILED_PKGS+=( ${PKG} )
+        continue
+    fi
+
+    # Check for errors due to option requirements and enable the required options
+    resolution_errors=$(cave resolve "${VIA_BIN[@]}" ${ARGS} ${PKG} 2>&1 >/dev/null)
+    dependent_opts=(
+        $(echo "${resolution_errors}" \
+            | sed -e "/following option requirements/{N;s@.* for \([^/]\+/[^(0-9)]\+\)-.*:.* requires option '\(.*\)' to be enabled@requirement:\1!\2@;}" \
+            | grep '^requirement:' \
+            | cut -d: -f2-
+        )
+    )
+    for dependent_opt in "${dependent_opts[@]}"; do
+        pkg="$(echo ${dependent_opt} | cut -d! -f1)"
+        opt="$(echo ${dependent_opt} | cut -d! -f2)"
+
+        echo "${pkg} ${opt/:/: }" >> /etc/paludis/options.conf
+    done
+
+    # Perform the build itself
+    echo "ARGS: ${ARGS}"
+    echo "**************************************************************"
+    opts=(
+        "${VIA_BIN[@]}"
+        ${ARGS}
+        --lazy
+    )
+    # Check if resolution with binary promotion works
+    _edov cave resolve "${opts[@]}" --promote-binaries if-same ${PKG}
+    rc=$?
+    if [[ ${rc} -gt 0 ]]; then
+        _einfo "Resolving with binary promotion failed! Will do build without..."
+    else
+        _einfo "Resolving with binary promotion successful! Building with binaries..."
+        opts+=( --promote-binaries if-same )
+    fi
+
+    _edov cave resolve "${opts[@]}" ${PKG} -x
+    rc=$?
+    if [[ ${rc} -gt 0 ]]; then
+        _einfo "Build failed!"
+        FAILED_PKGS+=( ${PKG} )
+        continue
+    fi
+
+    SUCCEEDED_PKGS+=( ${PKG} )
+
+    _einfo "**************************************************************"
+    _einfo "Running QA tools on ${PKG}"
+
+    # Check dependencies
+    _einfo "Inspect ${PKG} with mscan2.rb"
+    MSCAN_RESULTS+=( "$(
+        echo "**************************************************************"
+        echo "Dependencies I believe to have found for ${PKG} (excluding system):"
+        /usr/local/bin/mscan2.rb -i system --hide-libs unused ${PKG/::*\[/\[} 2>&1
+    )" )
+
+    _einfo "Inspect ${PKG} with check_slots"
+    CHECK_SLOTS_RESULTS+=( "$(
+        echo "**************************************************************"
+        echo "Check if dependencies are slotted properly for ${PKG}:"
+        /usr/local/bin/check_slots "${PKG}" 2>&1
+    )" )
+done
+
+# Get rid of now unused pbin tarballs, to keep the cache small
+_edo cave print-unused-distfiles -i pbin | xargs -I{files} find {files} -not -mmin -60 -exec rm {} +
+
+if [[ ${#MSCAN_RESULTS[@]} -gt 0 ]]; then
+    echo "**************************************************************"
+    echo "mscan2.rb results: ${MSCAN_RESULTS[@]/#/$'\n'}"
+    echo "**************************************************************"
+fi
+if [[ ${#CHECK_SLOTS_RESULTS[@]} -gt 0 ]]; then
+    echo "**************************************************************"
+    echo "check_slots results: ${CHECK_SLOTS_RESULTS[@]/#/$'\n'}"
+    echo "**************************************************************"
+fi
+if [[ ${#SUCCEEDED_PKGS[@]} -gt 0 ]]; then
+    echo "Builds that succeeded: ${SUCCEEDED_PKGS[@]/#/$'\n'    }"
+    echo "**************************************************************"
+fi
+if [[ ${#FAILED_PKGS[@]} -gt 0 ]]; then
+    echo "Builds that failed: ${FAILED_PKGS[@]/#/$'\n'    }"
+    echo "**************************************************************"
+fi
+
+[[ ${#FAILED_PKGS[@]} -gt 0 ]] && exit 1 || exit 0

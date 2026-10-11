@@ -1,0 +1,53 @@
+#!/usr/bin/env bash
+# Prints the packages a workflow run has to build, as a JSON array of
+# "category/name".
+#
+# Environment:
+#   EVENT     workflow_dispatch, push or pull_request
+#   PACKAGES  workflow_dispatch only: "all", or a list of category/name
+#   BASE      push and pull_request: the commit to compare HEAD with
+
+set -euo pipefail
+
+# Built when the CI itself changes, to check it still works
+CANARY=net-apps/chisel
+
+all_packages() {
+    ls packages/*/*/*.exheres-0 | cut -d/ -f2,3 | sort -u
+}
+
+# Packages whose exheres requires the given exlib of exlibs/
+consumers() {
+    grep -lE "^require (.* )?${1}( |\$)" packages/*/*/*.exheres-0 | cut -d/ -f2,3 || true
+}
+
+pkgs=()
+if [[ ${EVENT} == workflow_dispatch ]]; then
+    if [[ ${PACKAGES} == all ]]; then
+        pkgs=( $(all_packages) )
+    else
+        for pkg in ${PACKAGES}; do
+            if ! all_packages | grep -qxF "${pkg}"; then
+                echo "Unknown package: ${pkg}" >&2
+                exit 1
+            fi
+            pkgs+=( "${pkg}" )
+        done
+    fi
+else
+    # A force push or a new branch leaves no usable base: test the last commit
+    git cat-file -e "${BASE}^{commit}" 2>/dev/null || BASE=HEAD^
+
+    while read -r file; do
+        if [[ ${file} =~ ^packages/([^/]+/[^/]+)/[^/]+\.(exheres-0|exlib)$ ]]; then
+            pkgs+=( "${BASH_REMATCH[1]}" )
+        elif [[ ${file} =~ ^exlibs/([^/]+)\.exlib$ ]]; then
+            pkgs+=( $(consumers "${BASH_REMATCH[1]}") )
+        elif [[ ${file} == .github/* ]]; then
+            pkgs+=( ${CANARY} )
+        fi
+    done < <(git diff --name-only --diff-filter=d "${BASE}" HEAD)
+fi
+
+# Drop duplicates and packages removed since
+printf '%s\n' "${pkgs[@]}" | sort -u | { grep -xFf <(all_packages) || true; } | jq -Rnc '[inputs]'
