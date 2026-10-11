@@ -74,6 +74,8 @@ names_cache = \${root}/var/cache/paludis/names
 write_cache = \${root}/var/cache/paludis/metadata
 EOF
 _edo cave sync
+# Call generate metadata to speed things up later
+_edo cave generate-metadata
 
 declare -a PKGS
 for arg in "${@}"; do
@@ -156,6 +158,8 @@ for PKG in "${PKGS[@]}"; do
     do
         _edo cave resolve -Ks "${NEW_REPOS[@]}" -x
     done
+    # Call generate metadata to speed things up later
+    _edo cave generate-metadata
 
     # Handle confirmations automatically
     TMPFILE=$(mktemp -uq)
