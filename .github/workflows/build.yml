@@ -1,0 +1,83 @@
+name: build
+
+on:
+  push:
+    branches: [main]
+    paths: ['packages/**', 'exlibs/**', '.github/**']
+  pull_request:
+    paths: ['packages/**', 'exlibs/**', '.github/**']
+  workflow_dispatch:
+    inputs:
+      packages:
+        description: 'Packages to build ("category/name", space separated), or "all"'
+        required: true
+        default: all
+
+permissions:
+  contents: read
+
+concurrency:
+  group: build-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  plan:
+    runs-on: ubuntu-latest
+    outputs:
+      packages: ${{ steps.plan.outputs.packages }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - id: plan
+        env:
+          EVENT: ${{ github.event_name }}
+          PACKAGES: ${{ inputs.packages }}
+          BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
+        run: |
+          packages=$(.github/scripts/plan)
+          echo "Packages to build: ${packages}"
+          echo "packages=${packages}" >> "${GITHUB_OUTPUT}"
+
+  build:
+    needs: plan
+    if: needs.plan.outputs.packages != '[]'
+    name: ${{ matrix.package }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 350
+    strategy:
+      fail-fast: false
+      matrix:
+        package: ${{ fromJSON(needs.plan.outputs.packages) }}
+    steps:
+      - uses: actions/checkout@v7
+      # Dependencies are built from source the first time: toolchains need room
+      - name: Free disk space
+        run: sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL
+      - name: Restore binary packages
+        uses: actions/cache/restore@v6
+        with:
+          path: ~/pbins
+          key: pbins-${{ github.run_id }}
+          restore-keys: pbins-
+      - name: Build
+        env:
+          PACKAGE: ${{ matrix.package }}
+        run: |
+          mkdir -p ~/pbins
+          docker run --rm -v "${PWD}:/repo:ro" -v "${HOME}/pbins:/pbins" \
+              exherbo/exherbo_ci /repo/.github/scripts/buildtest "${PACKAGE}"
+      # The key follows the content, so that an unchanged cache isn't saved again
+      - name: Describe binary packages
+        id: pbins
+        if: always()
+        run: |
+          mkdir -p ~/pbins
+          sudo chown -R "$(id -u):$(id -g)" ~/pbins
+          echo "hash=$(cd ~/pbins && find . -type f | sort | sha256sum | cut -c1-16)" >> "${GITHUB_OUTPUT}"
+      - name: Save binary packages
+        if: always()
+        uses: actions/cache/save@v6
+        with:
+          path: ~/pbins
+          key: pbins-${{ steps.pbins.outputs.hash }}
