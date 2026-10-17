@@ -1,0 +1,78 @@
+# Copyright 2026 davlgd <1110600+davlgd@users.noreply.github.com>
+# Distributed under the terms of the GNU General Public License v2
+
+require github [ user=canonical tag=${PV} ]
+require python [ blacklist=2 multibuild=false ]
+require meson
+require bash-completion systemd-service
+
+SUMMARY="Multi-distribution method for cross-platform cloud instance initialisation"
+DESCRIPTION="
+cloud-init configures a cloud instance at boot from the metadata and user data its platform
+provides: users and SSH keys, hostname, network, packages, files and commands to run.
+"
+HOMEPAGE="https://cloud-init.io"
+
+LICENCES="|| ( Apache-2.0 GPL-3 )"
+SLOT="0"
+PLATFORMS="~amd64 ~armv8"
+MYOPTIONS=""
+
+# Unit tests need pytest, pytest-mock, responses and passlib
+RESTRICT="test"
+
+DEPENDENCIES="
+    build:
+        virtual/pkg-config
+        dev-python/Jinja2[python_abis:*(-)?]
+        dev-python/PyYAML[python_abis:*(-)?]
+        dev-python/requests[python_abis:*(-)?]
+    build+run:
+        sys-apps/systemd
+    run:
+        dev-python/configobj[python_abis:*(-)?]
+        dev-python/Jinja2[python_abis:*(-)?]
+        dev-python/jsonpatch[python_abis:*(-)?]
+        dev-python/jsonschema[python_abis:*(-)?]
+        dev-python/oauthlib[python_abis:*(-)?]
+        dev-python/PyYAML[python_abis:*(-)?]
+        dev-python/requests[python_abis:*(-)?]
+        sys-apps/iproute2
+        sys-apps/shadow
+        sys-apps/util-linux
+    suggestion:
+        app-admin/sudo [[ description = [ Sudo rules for the users cloud-init creates ] ]]
+        net-misc/dhcpcd [[ description = [ Ephemeral DHCP for datasources reached over the network ] ]]
+        sys-fs/e2fsprogs [[ description = [ Resize ext4 root filesystems ] ]]
+        sys-fs/growpart [[ description = [ Grow the root partition on first boot ] ]]
+"
+
+DEFAULT_SRC_PREPARE_PATCHES=(
+    "${FILES}"/${PNV}-exherbo-support.patch
+)
+
+MESON_SRC_CONFIGURE_PARAMS=(
+    -Dbash_completion=false
+    -Ddisable_sshd_keygen=false
+    -Ddownstream_version=${PVR}
+    -Dinit_system=systemd
+)
+
+src_prepare() {
+    meson_src_prepare
+
+    # respect selected python abi
+    edo sed \
+        -e "1s:#!/usr/bin/env python3:#!/usr/bin/env python$(python_get_abi):" \
+        -i scripts/cloud-id scripts/cloud-init tools/render-template
+}
+
+src_install() {
+    meson_src_install
+
+    # scripts run by 'cloud-init clean'
+    keepdir /etc/cloud/clean.d
+
+    dobashcompletion bash_completion/cloud-init
+}
+
