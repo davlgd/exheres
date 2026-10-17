@@ -1,0 +1,39 @@
+# Copyright 2026 davlgd <1110600+davlgd@users.noreply.github.com>
+# Distributed under the terms of the GNU General Public License v2
+
+MY_PN=cloud-utils
+
+require github [ user=canonical tag=${PV} ]
+
+SUMMARY="Extend a partition to fill the available space"
+DESCRIPTION="
+growpart rewrites a partition table so that a partition uses all the free space following it. Cloud
+instances use it at first boot to grow their root partition to the size of their disk. It comes from
+Canonical's cloud-utils.
+"
+
+LICENCES="GPL-3"
+SLOT="0"
+PLATFORMS="~amd64 ~armv8"
+MYOPTIONS=""
+
+# Tests need root, loop devices and qemu-img
+RESTRICT="test"
+
+DEPENDENCIES="
+    run:
+        sys-apps/util-linux
+    suggestion:
+        sys-apps/gptfdisk [[ description = [ Use sgdisk instead of sfdisk for GPT partition tables ] ]]
+"
+
+src_compile() {
+    :
+}
+
+src_install() {
+    dobin bin/growpart
+    doman man/growpart.1
+    emagicdocs
+}
+

@@ -1,0 +1,385 @@
+Source: David Legrand <david.legrand@clever.cloud>
+Upstream: not yet submitted
+Reason: add Exherbo as a supported distribution
+
+From f210fc2b2e1691d1fa28c94bedd9dd11310216c4 Mon Sep 17 00:00:00 2001
+From: David Legrand <david.legrand@clever.cloud>
+Date: Sat, 17 Oct 2026 23:27:19 +0200
+Subject: [PATCH] feat(exherbo): add Exherbo support
+
+---
+ cloudinit/config/cc_ca_certs.py         |  2 +
+ cloudinit/config/cc_ntp.py              |  7 ++
+ cloudinit/distros/__init__.py           |  1 +
+ cloudinit/distros/exherbo.py            | 98 +++++++++++++++++++++++++
+ cloudinit/util.py                       |  1 +
+ config/cloud.cfg.tmpl                   | 11 +--
+ doc/rtd/reference/availability.rst      |  1 +
+ systemd/cloud-init-generator.tmpl       |  2 +-
+ templates/hosts.exherbo.tmpl            | 23 ++++++
+ tests/unittests/distros/test_exherbo.py | 54 ++++++++++++++
+ tools/render-template                   |  1 +
+ 11 files changed, 195 insertions(+), 6 deletions(-)
+ create mode 100644 cloudinit/distros/exherbo.py
+ create mode 100644 templates/hosts.exherbo.tmpl
+ create mode 100644 tests/unittests/distros/test_exherbo.py
+
+diff --git a/cloudinit/config/cc_ca_certs.py b/cloudinit/config/cc_ca_certs.py
+index 939b62d..e7b97c9 100644
+--- a/cloudinit/config/cc_ca_certs.py
++++ b/cloudinit/config/cc_ca_certs.py
+@@ -72,6 +72,7 @@ distros = list(DISTRO_FAMILY.keys()) + [
+     "aosc",
+     "alpine",
+     "debian",
++    "exherbo",
+     "raspberry-pi-os",
+     "rhel",
+     "opensuse",
+@@ -147,6 +148,7 @@ def disable_default_ca_certs(distro_name, distro_cfg):
+         "alpine",
+         "aosc",
+         "debian",
++        "exherbo",
+         "raspberry-pi-os",
+         "ubuntu",
+     ]:
+diff --git a/cloudinit/config/cc_ntp.py b/cloudinit/config/cc_ntp.py
+index e1a27b8..9542e2e 100644
+--- a/cloudinit/config/cc_ntp.py
++++ b/cloudinit/config/cc_ntp.py
+@@ -32,6 +32,7 @@ distros = [
+     "cos",
+     "debian",
+     "eurolinux",
++    "exherbo",
+     "fedora",
+     "freebsd",
+     "mariner",
+@@ -118,6 +119,12 @@ DISTRO_CLIENT_CONFIG: Dict[str, Dict] = {
+             "confpath": "/etc/systemd/timesyncd.conf",
+         },
+     },
++    "exherbo": {
++        "systemd-timesyncd": {
++            "check_exe": "/usr/lib/systemd/systemd-timesyncd",
++            "confpath": "/etc/systemd/timesyncd.conf",
++        },
++    },
+     "azurelinux": {
+         "chrony": {
+             "service_name": "chronyd",
+diff --git a/cloudinit/distros/__init__.py b/cloudinit/distros/__init__.py
+index 2703ebd..0a43810 100644
+--- a/cloudinit/distros/__init__.py
++++ b/cloudinit/distros/__init__.py
+@@ -66,6 +66,7 @@ OSFAMILIES = {
+     "aosc": ["aosc"],
+     "arch": ["arch"],
+     "debian": ["debian", "ubuntu", "raspberry-pi-os"],
++    "exherbo": ["exherbo"],
+     "freebsd": ["freebsd", "dragonfly"],
+     "gentoo": ["gentoo", "cos"],
+     "netbsd": ["netbsd"],
+diff --git a/cloudinit/distros/exherbo.py b/cloudinit/distros/exherbo.py
+new file mode 100644
+index 0000000..96c1705
+--- /dev/null
++++ b/cloudinit/distros/exherbo.py
+@@ -0,0 +1,98 @@
++# This file is part of cloud-init. See LICENSE file for license information.
++
++import logging
++
++from cloudinit import distros, helpers, subp, util
++from cloudinit.distros import PackageList
++from cloudinit.distros.aosc import update_locale_conf
++from cloudinit.distros.parsers.hostname import HostnameConf
++from cloudinit.settings import PER_ALWAYS, PER_INSTANCE
++
++LOG = logging.getLogger(__name__)
++
++
++class Distro(distros.Distro):
++    systemd_locale_conf_fn = "/etc/locale.conf"
++    init_cmd = ["systemctl"]
++    tz_local_fn = "/etc/localtime"
++    usr_lib_exec = "/usr/libexec"
++    default_locale = "en_US.UTF-8"
++
++    def __init__(self, name, cfg, paths):
++        distros.Distro.__init__(self, name, cfg, paths)
++        self._runner = helpers.Runners(paths)
++        self.osfamily = "exherbo"
++        cfg["ssh_svcname"] = "sshd"
++
++    def apply_locale(self, locale, out_fn=None):
++        if not out_fn:
++            out_fn = self.systemd_locale_conf_fn
++        # glibc on Exherbo ships a prebuilt locale-archive and no locale-gen:
++        # only compile the locale when it is missing
++        out, _ = subp.subp(["localedef", "--list-archive"])
++        wanted = locale.lower().replace("utf-8", "utf8")
++        if wanted not in out.lower().split():
++            name, _, charset = locale.partition(".")
++            subp.subp(
++                ["localedef", "-i", name, "-f", charset or "UTF-8", locale],
++                capture=False,
++            )
++        update_locale_conf(out_fn, {"LANG": locale})
++
++    def install_packages(self, pkglist: PackageList):
++        self.update_package_sources()
++        self.package_command("install", pkgs=pkglist)
++
++    def _write_hostname(self, hostname, filename):
++        create_hostname_file = util.get_cfg_option_bool(
++            self._cfg, "create_hostname_file", True
++        )
++        if not create_hostname_file:
++            LOG.info("create_hostname_file is False; hostname file not created")
++            return
++        conf = HostnameConf("")
++        conf.set_hostname(hostname)
++        util.write_file(filename, str(conf), omode="w", mode=0o644)
++
++    def _read_system_hostname(self):
++        return (
++            self.hostname_conf_fn,
++            self._read_hostname(self.hostname_conf_fn),
++        )
++
++    def _read_hostname(self, filename, default=None):
++        try:
++            conf = HostnameConf(util.load_text_file(filename))
++            conf.parse()
++            return conf.hostname or default
++        except IOError:
++            return default
++
++    def _apply_hostname(self, hostname):
++        try:
++            subp.subp(["hostnamectl", "--transient", "set-hostname", hostname])
++        except subp.ProcessExecutionError:
++            util.logexc(LOG, "Failed to set the transient hostname %s", hostname)
++
++    def set_timezone(self, tz):
++        distros.set_etc_timezone(tz=tz, tz_file=self._find_tz_file(tz))
++
++    def package_command(self, command, args=None, pkgs=None):
++        cmd = ["cave", "resolve", "--execute"]
++        if args and isinstance(args, str):
++            cmd.append(args)
++        elif args and isinstance(args, list):
++            cmd.extend(args)
++        if command == "upgrade":
++            cmd.append("world")
++        else:
++            cmd.extend(util.expand_package_list("=%s-%s", pkgs or []))
++        subp.subp(cmd, capture=False)
++
++    def update_package_sources(self, *, force=False):
++        self._runner.run(
++            "update-sources",
++            subp.subp,
++            ["cave", "sync"],
++            freq=PER_ALWAYS if force else PER_INSTANCE,
++        )
+diff --git a/cloudinit/util.py b/cloudinit/util.py
+index 5fa0f94..9a8cbaa 100644
+--- a/cloudinit/util.py
++++ b/cloudinit/util.py
+@@ -608,6 +608,7 @@ def _get_variant(info):
+             "cloudlinux",
+             "debian",
+             "eurolinux",
++            "exherbo",
+             "fedora",
+             "mariner",
+             "miraclelinux",
+diff --git a/config/cloud.cfg.tmpl b/config/cloud.cfg.tmpl
+index 3926ea8..250f299 100644
+--- a/config/cloud.cfg.tmpl
++++ b/config/cloud.cfg.tmpl
+@@ -14,6 +14,7 @@
+                  "ubuntu": "Ubuntu", "unknown": "Ubuntu"}) %}
+ {% set groups = ({"alpine": "adm, wheel", "aosc": "wheel", "arch": "wheel, users",
+                   "debian": "adm, audio, cdrom, dialout, dip, floppy, netdev, plugdev, sudo, video",
++                  "exherbo": "adm, wheel",
+                   "gentoo": "users, wheel", "mariner": "wheel",
+                   "photon": "wheel",
+                   "openmandriva": "wheel, users, systemd-journal",
+@@ -219,7 +220,7 @@ cloud_final_modules:
+ # (not accessible to handlers/transforms)
+ system_info:
+   # This will affect which distro class gets used
+-{% if variant in ["alpine", "amazon", "aosc", "arch", "azurelinux", "debian", "fedora",
++{% if variant in ["alpine", "amazon", "aosc", "arch", "azurelinux", "debian", "exherbo", "fedora",
+                   "freebsd", "gentoo", "mariner", "netbsd", "openbsd",
+                   "OpenCloudOS", "openeuler", "openmandriva", "photon",
+                   "raspberry-pi-os", "suse", "TencentOS", "ubuntu"] or is_rhel %}
+@@ -237,7 +238,7 @@ system_info:
+ {% else %}
+     name: {{ variant }}
+ {% endif %}
+-{% if variant in ["alpine", "amazon", "aosc", "arch", "azurelinux", "debian", "fedora",
++{% if variant in ["alpine", "amazon", "aosc", "arch", "azurelinux", "debian", "exherbo", "fedora",
+                   "gentoo", "mariner", "OpenCloudOS", "openeuler",
+                   "openmandriva", "photon", "raspberry-pi-os",
+                   "suse", "TencentOS", "ubuntu", "unknown"]
+@@ -296,7 +297,7 @@ system_info:
+ {% elif variant in ["freebsd", "netbsd", "openbsd"] %}
+   network:
+     renderers: ['{{ variant }}']
+-{% elif variant in ["mariner", "photon"] %}
++{% elif variant in ["exherbo", "mariner", "photon"] %}
+   network:
+     renderers: ['networkd']
+ {% elif variant == "openmandriva" %}
+@@ -327,7 +328,7 @@ system_info:
+   # Automatically discover the best ntp_client
+   ntp_client: auto
+ {% endif %}
+-{% if variant in ["alpine", "amazon", "aosc", "arch", "azurelinux", "debian", "fedora",
++{% if variant in ["alpine", "amazon", "aosc", "arch", "azurelinux", "debian", "exherbo", "fedora",
+                   "gentoo", "mariner", "OpenCloudOS", "openeuler",
+                   "openmandriva", "photon", "suse", "TencentOS", "ubuntu",
+                   "unknown"]
+@@ -375,7 +376,7 @@ system_info:
+ {% endif %}
+ {% if variant in ["debian", "raspberry-pi-os", "ubuntu", "unknown"] %}
+   ssh_svcname: ssh
+-{% elif variant in ["alpine", "amazon", "aosc", "arch", "azurelinux", "fedora",
++{% elif variant in ["alpine", "amazon", "aosc", "arch", "azurelinux", "exherbo", "fedora",
+                     "gentoo", "mariner", "OpenCloudOS", "openeuler",
+                     "openmandriva", "photon", "suse", "TencentOS"]
+                    or is_rhel %}
+diff --git a/doc/rtd/reference/availability.rst b/doc/rtd/reference/availability.rst
+index 8daf035..61012bf 100644
+--- a/doc/rtd/reference/availability.rst
++++ b/doc/rtd/reference/availability.rst
+@@ -28,6 +28,7 @@ NetBSD, OpenBSD and DragonFlyBSD:
+ - Debian
+ - DragonFlyBSD
+ - EuroLinux
++- Exherbo
+ - Fedora
+ - FreeBSD
+ - Gentoo Linux
+diff --git a/systemd/cloud-init-generator.tmpl b/systemd/cloud-init-generator.tmpl
+index 888bad5..355afd3 100644
+--- a/systemd/cloud-init-generator.tmpl
++++ b/systemd/cloud-init-generator.tmpl
+@@ -20,7 +20,7 @@ CLOUD_SYSTEM_TARGET="/usr/lib/systemd/system/cloud-init.target"
+ {% else %}
+ CLOUD_SYSTEM_TARGET="/lib/systemd/system/cloud-init.target"
+ {% endif %}
+-{% if variant in ["almalinux", "azurelinux", "centos", "cloudlinux", "eurolinux", "fedora",
++{% if variant in ["almalinux", "azurelinux", "centos", "cloudlinux", "eurolinux", "exherbo", "fedora",
+                   "miraclelinux", "openeuler", "OpenCloudOS", "openmandriva", "rhel", "rocky", "TencentOS", "virtuozzo"] %}
+     dsidentify="/usr/libexec/cloud-init/ds-identify"
+ {% elif variant == "benchmark" %}
+diff --git a/templates/hosts.exherbo.tmpl b/templates/hosts.exherbo.tmpl
+new file mode 100644
+index 0000000..3af7643
+--- /dev/null
++++ b/templates/hosts.exherbo.tmpl
+@@ -0,0 +1,23 @@
++## template:jinja
++{#
++This file (/etc/cloud/templates/hosts.exherbo.tmpl) is only utilized
++if enabled in cloud-config.  Specifically, in order to enable it
++you need to add the following to config:
++   manage_etc_hosts: True
++-#}
++# Your system has configured 'manage_etc_hosts' as True.
++# As a result, if you wish for changes to this file to persist
++# then you will need to either
++# a.) make changes to the master file in /etc/cloud/templates/hosts.exherbo.tmpl
++# b.) change or remove the value of 'manage_etc_hosts' in
++#     /etc/cloud/cloud.cfg or cloud-config from user-data
++#
++#<ip-address>   <hostname.domain.org>   <hostname>
++{# The value '{{hostname}}' will be replaced with the local-hostname -#}
++127.0.0.1       {{fqdn}} {{hostname}}
++127.0.0.1       localhost
++
++# The following lines are desirable for IPv6 capable hosts
++::1             localhost ip6-localhost ip6-loopback
++ff02::1         ip6-allnodes
++ff02::2         ip6-allrouters
+diff --git a/tests/unittests/distros/test_exherbo.py b/tests/unittests/distros/test_exherbo.py
+new file mode 100644
+index 0000000..85d4564
+--- /dev/null
++++ b/tests/unittests/distros/test_exherbo.py
+@@ -0,0 +1,54 @@
++# This file is part of cloud-init. See LICENSE file for license information.
++
++from unittest import mock
++
++from tests.unittests.helpers import get_distro
++
++M_PATH = "cloudinit.distros.exherbo."
++
++
++class TestExherbo:
++    def test_get_distro(self):
++        distro = get_distro("exherbo")
++        assert distro.osfamily == "exherbo"
++
++    @mock.patch(M_PATH + "subp.subp")
++    def test_package_command_install(self, m_subp):
++        get_distro("exherbo").package_command(
++            "install", pkgs=["app-editors/vim", ("sys-apps/htop", "3.4.1")]
++        )
++        m_subp.assert_called_once_with(
++            [
++                "cave",
++                "resolve",
++                "--execute",
++                "app-editors/vim",
++                "=sys-apps/htop-3.4.1",
++            ],
++            capture=False,
++        )
++
++    @mock.patch(M_PATH + "subp.subp")
++    def test_package_command_upgrade(self, m_subp):
++        get_distro("exherbo").package_command("upgrade")
++        m_subp.assert_called_once_with(
++            ["cave", "resolve", "--execute", "world"], capture=False
++        )
++
++    @mock.patch(M_PATH + "update_locale_conf")
++    @mock.patch(M_PATH + "subp.subp", return_value=("C.utf8\nen_US.utf8\n", ""))
++    def test_apply_locale_already_compiled(self, m_subp, m_update):
++        get_distro("exherbo").apply_locale("en_US.UTF-8")
++        m_subp.assert_called_once_with(["localedef", "--list-archive"])
++        m_update.assert_called_once_with(
++            "/etc/locale.conf", {"LANG": "en_US.UTF-8"}
++        )
++
++    @mock.patch(M_PATH + "update_locale_conf")
++    @mock.patch(M_PATH + "subp.subp", return_value=("C.utf8\n", ""))
++    def test_apply_locale_compiles_missing(self, m_subp, m_update):
++        get_distro("exherbo").apply_locale("fr_FR.UTF-8")
++        m_subp.assert_called_with(
++            ["localedef", "-i", "fr_FR", "-f", "UTF-8", "fr_FR.UTF-8"],
++            capture=False,
++        )
+diff --git a/tools/render-template b/tools/render-template
+index 4b5efcf..d266300 100755
+--- a/tools/render-template
++++ b/tools/render-template
+@@ -23,6 +23,7 @@ def main():
+         "debian",
+         "dragonfly",
+         "eurolinux",
++        "exherbo",
+         "fedora",
+         "freebsd",
+         "gentoo",
+-- 
+2.54.0 (Apple Git-157)
+
