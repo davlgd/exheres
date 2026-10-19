@@ -33,15 +33,16 @@ DEPENDENCIES="
         dev-python/configobj[python_abis:*(-)?]
         dev-python/Jinja2[python_abis:*(-)?]
         dev-python/jsonpatch[python_abis:*(-)?]
-        dev-python/jsonschema[python_abis:*(-)?]
-        dev-python/oauthlib[python_abis:*(-)?]
         dev-python/PyYAML[python_abis:*(-)?]
         dev-python/requests[python_abis:*(-)?]
+        net/netcat-openbsd [[ note = [ The units signal each stage with nc -U ] ]]
         sys-apps/iproute2
         sys-apps/shadow
         sys-apps/util-linux
     suggestion:
         app-admin/sudo [[ description = [ Sudo rules for the users cloud-init creates ] ]]
+        dev-python/jsonschema[python_abis:*(-)?] [[ description = [ Validate cloud-config against its schema ] ]]
+        dev-python/oauthlib[python_abis:*(-)?] [[ description = [ The MAAS datasource and webhook reporting ] ]]
         net-misc/dhcpcd [[ description = [ Ephemeral DHCP for datasources reached over the network ] ]]
         sys-fs/e2fsprogs [[ description = [ Resize ext4 root filesystems ] ]]
         sys-fs/growpart [[ description = [ Grow the root partition on first boot ] ]]
