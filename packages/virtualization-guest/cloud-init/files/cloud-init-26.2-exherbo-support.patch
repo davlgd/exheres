@@ -2,24 +2,24 @@ Source: David Legrand <david.legrand@clever.cloud>
 Upstream: not yet submitted
 Reason: add Exherbo as a supported distribution
 
-From 0ebe2dba1bd8c7726dfd925a1144d6dcc7c8ad46 Mon Sep 17 00:00:00 2001
+From 3dd6d03d129176168778985840733032e94220a0 Mon Sep 17 00:00:00 2001
 From: David Legrand <david.legrand@clever.cloud>
 Date: Sat, 17 Oct 2026 23:27:19 +0200
 Subject: [PATCH] feat(exherbo): add Exherbo support
 
 ---
- cloudinit/config/cc_ca_certs.py         |  2 +
- cloudinit/config/cc_ntp.py              |  7 ++
- cloudinit/distros/__init__.py           |  1 +
- cloudinit/distros/exherbo.py            | 98 +++++++++++++++++++++++++
- cloudinit/util.py                       |  1 +
- config/cloud.cfg.tmpl                   | 11 +--
- doc/rtd/reference/availability.rst      |  1 +
- systemd/cloud-init-generator.tmpl       |  2 +-
- templates/hosts.exherbo.tmpl            | 23 ++++++
- tests/unittests/distros/test_exherbo.py | 65 ++++++++++++++++
- tools/render-template                   |  1 +
- 11 files changed, 206 insertions(+), 6 deletions(-)
+ cloudinit/config/cc_ca_certs.py         |   2 +
+ cloudinit/config/cc_ntp.py              |   7 ++
+ cloudinit/distros/__init__.py           |   1 +
+ cloudinit/distros/exherbo.py            | 113 ++++++++++++++++++++++++
+ cloudinit/util.py                       |   1 +
+ config/cloud.cfg.tmpl                   |  11 +--
+ doc/rtd/reference/availability.rst      |   1 +
+ systemd/cloud-init-generator.tmpl       |   2 +-
+ templates/hosts.exherbo.tmpl            |  23 +++++
+ tests/unittests/distros/test_exherbo.py |  75 ++++++++++++++++
+ tools/render-template                   |   1 +
+ 11 files changed, 231 insertions(+), 6 deletions(-)
  create mode 100644 cloudinit/distros/exherbo.py
  create mode 100644 templates/hosts.exherbo.tmpl
  create mode 100644 tests/unittests/distros/test_exherbo.py
@@ -83,13 +83,14 @@ index 2703ebd..0a43810 100644
      "netbsd": ["netbsd"],
 diff --git a/cloudinit/distros/exherbo.py b/cloudinit/distros/exherbo.py
 new file mode 100644
-index 0000000..5f40831
+index 0000000..21900d5
 --- /dev/null
 +++ b/cloudinit/distros/exherbo.py
-@@ -0,0 +1,98 @@
+@@ -0,0 +1,113 @@
 +# This file is part of cloud-init. See LICENSE file for license information.
 +
 +import logging
++import os
 +
 +from cloudinit import distros, helpers, subp, util
 +from cloudinit.distros import PackageList
@@ -137,7 +138,9 @@ index 0000000..5f40831
 +            self._cfg, "create_hostname_file", True
 +        )
 +        if not create_hostname_file:
-+            LOG.info("create_hostname_file is False; hostname file not created")
++            LOG.info(
++                "create_hostname_file is False; hostname file not created"
++            )
 +            return
 +        conf = HostnameConf("")
 +        conf.set_hostname(hostname)
@@ -161,7 +164,9 @@ index 0000000..5f40831
 +        try:
 +            subp.subp(["hostnamectl", "--transient", "set-hostname", hostname])
 +        except subp.ProcessExecutionError:
-+            util.logexc(LOG, "Failed to set the transient hostname %s", hostname)
++            util.logexc(
++                LOG, "Failed to set the transient hostname %s", hostname
++            )
 +
 +    def set_timezone(self, tz):
 +        distros.set_etc_timezone(tz=tz, tz_file=self._find_tz_file(tz))
@@ -176,14 +181,24 @@ index 0000000..5f40831
 +            cmd.append("world")
 +        else:
 +            cmd.extend(util.expand_package_list("=%s-%s", pkgs or []))
-+        subp.subp(cmd, capture=False)
++        self._cave(cmd)
 +
 +    def update_package_sources(self, *, force=False):
 +        self._runner.run(
 +            "update-sources",
-+            subp.subp,
++            self._cave,
 +            [["cave", "sync"]],
 +            freq=PER_ALWAYS if force else PER_INSTANCE,
++        )
++
++    @staticmethod
++    def _cave(cmd):
++        # cave refuses to start without HOME, which cloud-init's systemd
++        # units do not set.
++        subp.subp(
++            cmd,
++            capture=False,
++            update_env={"HOME": os.environ.get("HOME", "/root")},
 +        )
 diff --git a/cloudinit/util.py b/cloudinit/util.py
 index 5fa0f94..9a8cbaa 100644
@@ -310,17 +325,20 @@ index 0000000..3af7643
 +ff02::2         ip6-allrouters
 diff --git a/tests/unittests/distros/test_exherbo.py b/tests/unittests/distros/test_exherbo.py
 new file mode 100644
-index 0000000..3ab7527
+index 0000000..ac11a31
 --- /dev/null
 +++ b/tests/unittests/distros/test_exherbo.py
-@@ -0,0 +1,65 @@
+@@ -0,0 +1,75 @@
 +# This file is part of cloud-init. See LICENSE file for license information.
 +
++import os
 +from unittest import mock
 +
 +from tests.unittests.helpers import get_distro
 +
 +M_PATH = "cloudinit.distros.exherbo."
++# cloud-init's systemd units start it without HOME.
++NO_HOME = {"HOME": "/root"}
 +
 +
 +class TestExherbo:
@@ -342,16 +360,19 @@ index 0000000..3ab7527
 +                "=sys-apps/htop-3.4.1",
 +            ],
 +            capture=False,
++            update_env={"HOME": mock.ANY},
 +        )
 +
++    @mock.patch.dict(os.environ, clear=True)
 +    @mock.patch(M_PATH + "subp.subp")
 +    def test_install_packages_syncs_first(self, m_subp):
 +        get_distro("exherbo").install_packages(["sys-process/htop"])
 +        assert m_subp.call_args_list == [
-+            mock.call(["cave", "sync"]),
++            mock.call(["cave", "sync"], capture=False, update_env=NO_HOME),
 +            mock.call(
 +                ["cave", "resolve", "--execute", "sys-process/htop"],
 +                capture=False,
++                update_env=NO_HOME,
 +            ),
 +        ]
 +
@@ -359,11 +380,15 @@ index 0000000..3ab7527
 +    def test_package_command_upgrade(self, m_subp):
 +        get_distro("exherbo").package_command("upgrade")
 +        m_subp.assert_called_once_with(
-+            ["cave", "resolve", "--execute", "world"], capture=False
++            ["cave", "resolve", "--execute", "world"],
++            capture=False,
++            update_env={"HOME": mock.ANY},
 +        )
 +
 +    @mock.patch(M_PATH + "update_locale_conf")
-+    @mock.patch(M_PATH + "subp.subp", return_value=("C.utf8\nen_US.utf8\n", ""))
++    @mock.patch(
++        M_PATH + "subp.subp", return_value=("C.utf8\nen_US.utf8\n", "")
++    )
 +    def test_apply_locale_already_compiled(self, m_subp, m_update):
 +        get_distro("exherbo").apply_locale("en_US.UTF-8")
 +        m_subp.assert_called_once_with(["localedef", "--list-archive"])
