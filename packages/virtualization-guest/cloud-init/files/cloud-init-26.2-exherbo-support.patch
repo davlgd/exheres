@@ -2,7 +2,7 @@ Source: David Legrand <david.legrand@clever.cloud>
 Upstream: not yet submitted
 Reason: add Exherbo as a supported distribution
 
-From f210fc2b2e1691d1fa28c94bedd9dd11310216c4 Mon Sep 17 00:00:00 2001
+From 0ebe2dba1bd8c7726dfd925a1144d6dcc7c8ad46 Mon Sep 17 00:00:00 2001
 From: David Legrand <david.legrand@clever.cloud>
 Date: Sat, 17 Oct 2026 23:27:19 +0200
 Subject: [PATCH] feat(exherbo): add Exherbo support
@@ -17,9 +17,9 @@ Subject: [PATCH] feat(exherbo): add Exherbo support
  doc/rtd/reference/availability.rst      |  1 +
  systemd/cloud-init-generator.tmpl       |  2 +-
  templates/hosts.exherbo.tmpl            | 23 ++++++
- tests/unittests/distros/test_exherbo.py | 54 ++++++++++++++
+ tests/unittests/distros/test_exherbo.py | 65 ++++++++++++++++
  tools/render-template                   |  1 +
- 11 files changed, 195 insertions(+), 6 deletions(-)
+ 11 files changed, 206 insertions(+), 6 deletions(-)
  create mode 100644 cloudinit/distros/exherbo.py
  create mode 100644 templates/hosts.exherbo.tmpl
  create mode 100644 tests/unittests/distros/test_exherbo.py
@@ -83,7 +83,7 @@ index 2703ebd..0a43810 100644
      "netbsd": ["netbsd"],
 diff --git a/cloudinit/distros/exherbo.py b/cloudinit/distros/exherbo.py
 new file mode 100644
-index 0000000..96c1705
+index 0000000..5f40831
 --- /dev/null
 +++ b/cloudinit/distros/exherbo.py
 @@ -0,0 +1,98 @@
@@ -182,7 +182,7 @@ index 0000000..96c1705
 +        self._runner.run(
 +            "update-sources",
 +            subp.subp,
-+            ["cave", "sync"],
++            [["cave", "sync"]],
 +            freq=PER_ALWAYS if force else PER_INSTANCE,
 +        )
 diff --git a/cloudinit/util.py b/cloudinit/util.py
@@ -310,10 +310,10 @@ index 0000000..3af7643
 +ff02::2         ip6-allrouters
 diff --git a/tests/unittests/distros/test_exherbo.py b/tests/unittests/distros/test_exherbo.py
 new file mode 100644
-index 0000000..85d4564
+index 0000000..3ab7527
 --- /dev/null
 +++ b/tests/unittests/distros/test_exherbo.py
-@@ -0,0 +1,54 @@
+@@ -0,0 +1,65 @@
 +# This file is part of cloud-init. See LICENSE file for license information.
 +
 +from unittest import mock
@@ -343,6 +343,17 @@ index 0000000..85d4564
 +            ],
 +            capture=False,
 +        )
++
++    @mock.patch(M_PATH + "subp.subp")
++    def test_install_packages_syncs_first(self, m_subp):
++        get_distro("exherbo").install_packages(["sys-process/htop"])
++        assert m_subp.call_args_list == [
++            mock.call(["cave", "sync"]),
++            mock.call(
++                ["cave", "resolve", "--execute", "sys-process/htop"],
++                capture=False,
++            ),
++        ]
 +
 +    @mock.patch(M_PATH + "subp.subp")
 +    def test_package_command_upgrade(self, m_subp):
