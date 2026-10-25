@@ -1,0 +1,75 @@
+# Copyright 2026 David Legrand <me@davlgd.com>
+# Distributed under the terms of the GNU General Public License v2
+
+require cargo [ rust_minimum_version=1.99.0 crate_path=${PN} disable_default_features=true ]
+require github [ user=${PN} tag=${PV} ]
+require systemd-service
+
+# The release build embeds the latest console release available when it is built
+CONSOLE_PV=0.1.37
+
+SUMMARY="S3-compatible distributed object storage"
+HOMEPAGE+=" https://rustfs.com"
+DOWNLOADS+="
+    console? ( https://github.com/${PN}/console/releases/download/v${CONSOLE_PV}/${PN}-console-v${CONSOLE_PV}.zip )
+"
+
+LICENCES="Apache-2.0"
+SLOT="0"
+PLATFORMS="~amd64 ~armv8"
+MYOPTIONS="
+    console [[ description = [ Embed the web console, from upstream's prebuilt assets ] ]]
+    ftps [[ description = [ Serve the buckets over FTPS ] ]]
+    gcs [[ description = [ Support Google Cloud Storage as a remote tier ] ]]
+    sftp [[ description = [ Serve the buckets over SFTP ] ]]
+    swift [[ description = [ Serve the OpenStack Swift API, with Keystone authentication ] ]]
+    webdav [[ description = [ Serve the buckets over WebDAV ] ]]
+"
+
+DEPENDENCIES="
+    build:
+        dev-libs/protobuf:* [[ note = [ protoc, for pulsar ] ]]
+        virtual/pkg-config
+        console? ( virtual/unzip )
+    build+run:
+        app-arch/xz
+        app-arch/zstd
+        group/${PN}
+        user/${PN}
+"
+
+# Building the tests with the release profile takes more than 16 GB, and many
+# of them fail in the sandbox (DNS lookups, servers to set up)
+RESTRICT="test"
+
+ECARGO_FEATURE_ENABLES=(
+    'ftps ftps'
+    'gcs gcs'
+    'sftp sftp'
+    'swift swift'
+    'webdav webdav'
+)
+
+src_unpack() {
+    cargo_src_unpack
+
+    if option console; then
+        edo unzip -qo "${FETCHEDDIR}"/${PN}-console-v${CONSOLE_PV}.zip -d "${WORK}"/${PN}/static
+    fi
+}
+
+src_configure() {
+    # Link the system zstd instead of building the bundled one
+    export ZSTD_SYS_USE_PKG_CONFIG=1
+
+    cargo_src_configure
+}
+
+src_install() {
+    cargo_src_install
+    install_systemd_files
+
+    insinto /etc/conf.d
+    doins "${FILES}"/${PN}.conf
+}
+

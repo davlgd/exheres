@@ -1,0 +1,42 @@
+# Adapted from upstream's deploy/build/rustfs.service
+
+[Unit]
+Description=RustFS object storage server
+Documentation=https://docs.rustfs.com/
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=notify
+NotifyAccess=main
+User=rustfs
+Group=rustfs
+EnvironmentFile=/etc/conf.d/rustfs.conf
+ExecStart=/usr/bin/rustfs server
+StateDirectory=rustfs
+LogsDirectory=rustfs
+WorkingDirectory=/var/lib/rustfs
+
+LimitNOFILE=1048576
+LimitNPROC=32768
+TasksMax=infinity
+
+Restart=always
+RestartSec=10s
+TimeoutStartSec=120s
+TimeoutStopSec=45s
+
+NoNewPrivileges=true
+ProtectSystem=full
+ProtectHome=true
+PrivateTmp=true
+PrivateDevices=true
+ProtectClock=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+RestrictSUIDSGID=true
+RestrictRealtime=true
+
+[Install]
+WantedBy=multi-user.target
