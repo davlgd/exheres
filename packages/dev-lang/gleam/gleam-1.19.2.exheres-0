@@ -2,7 +2,7 @@
 # Distributed under the terms of the GNU General Public License v2
 
 require github [ user=gleam-lang tag=v${PV} force_git_clone=true ]
-require cargo [ crate_path="compiler-cli" ]
+require cargo [ crate_path="gleam-bin" ]
 
 SUMMARY="A friendly language for building type-safe systems that scale!"
 HOMEPAGE="https://gleam.run"
@@ -13,4 +13,11 @@ SLOT="0"
 PLATFORMS="~amd64 ~armv8"
 
 DEPENDENCIES=""
+
+src_test() {
+    # gleam-bin only wraps the CLI crate, which holds the tests
+    local CRATE_PATH=compiler-cli
+
+    cargo_src_test
+}
 
