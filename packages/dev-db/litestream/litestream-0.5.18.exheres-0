@@ -1,7 +1,7 @@
 # Copyright 2024 davlgd <1110600+davlgd@users.noreply.github.com>
 # Distributed under the terms of the GNU General Public License v2
 
-require go [ go_minimum_version=1.25 ] github [ user="benbjohnson" tag=v${PV} ]
+require go [ go_minimum_version=1.26 ] github [ user="benbjohnson" tag=v${PV} ]
 require systemd-service [ systemd_files=[ etc/litestream.service ] ]
 
 SUMMARY="Streaming replication for SQLite"
@@ -27,5 +27,16 @@ src_install() {
 
     install_systemd_files
 
+}
+
+src_test() {
+    # the server tests bind unix sockets under a hardcoded /tmp
+    esandbox allow_net "unix:/tmp/ls-test-*.sock"
+    esandbox allow_net "unix:/tmp/ls-sync-*/s"
+
+    go_src_test
+
+    esandbox disallow_net "unix:/tmp/ls-sync-*/s"
+    esandbox disallow_net "unix:/tmp/ls-test-*.sock"
 }
 
