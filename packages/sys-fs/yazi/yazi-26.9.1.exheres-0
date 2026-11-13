@@ -1,0 +1,55 @@
+# Copyright 2024 davlgd <1110600+davlgd@users.noreply.github.com>
+# Distributed under the terms of the GNU General Public License v2
+
+require cargo [ rust_minimum_version=1.95.0 ]
+require github [ user=sxyazi tag=v${PV} ]
+require bash-completion zsh-completion
+
+# Commit of the v${PV} tag, shown by yazi --version
+GIT_SHA=8dd895c
+
+SUMMARY="Blazing fast terminal file manager written in Rust, based on async I/O"
+HOMEPAGE+=" https://yazi-rs.github.io"
+
+UPSTREAM_DOCUMENTATION="https://yazi-rs.github.io/docs/quick-start [[ lang = en ]]"
+
+LICENCES="MIT"
+SLOT="0"
+PLATFORMS="~amd64 ~armv8"
+MYOPTIONS=""
+
+DEPENDENCIES="
+    build+run:
+        !sys-fs/yazi-cli [[
+            description = [ sys-fs/yazi now installs ya ]
+            resolution = uninstall-blocked-after
+        ]]
+        !sys-fs/yazi-fm [[
+            description = [ sys-fs/yazi now installs yazi ]
+            resolution = uninstall-blocked-after
+        ]]
+"
+
+src_configure() {
+    export VERGEN_GIT_SHA=${GIT_SHA}
+    export YAZI_GEN_COMPLETIONS=1
+
+    cargo_src_configure
+}
+
+src_install() {
+    local crate
+
+    # yazi-fm provides yazi, yazi-cli provides ya
+    for crate in yazi-fm yazi-cli; do
+        ecargo_install --path=${crate} --root="${IMAGE}"/usr/$(exhost --target) --frozen
+    done
+
+    emagicdocs
+
+    dobashcompletion yazi-boot/completions/yazi.bash yazi
+    dobashcompletion yazi-cli/completions/ya.bash ya
+    dozshcompletion yazi-boot/completions/_yazi
+    dozshcompletion yazi-cli/completions/_ya
+}
+
